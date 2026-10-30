@@ -115,8 +115,6 @@ input { font: 500 1rem var(--body); color: var(--ink); background: var(--raised)
 .unit-l { font: 600 .95rem var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .steps button { height: 48px; padding: 0; font: 600 1.15rem var(--display); font-variant-numeric: tabular-nums; }
-.preview { color: var(--muted); font-size: .9rem; }
-.preview b { color: var(--ink); font: 600 1.05rem var(--display); }
 
 /* Plate calculator */
 .plates { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 44px; }
@@ -167,7 +165,6 @@ input { font: 500 1rem var(--body); color: var(--ink); background: var(--raised)
 .sn { font: 600 .95rem var(--display); color: var(--muted); font-variant-numeric: tabular-nums; padding-left: 2px; }
 .ld { font: 600 1.3rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
 .ld small { color: var(--muted); font-size: .72em; }
-.ld .e { display: block; font: 400 .8rem var(--body); color: var(--muted); }
 .pr-tag { display: inline-block; background: var(--yellow); color: var(--on-yellow); font: 700 .72rem/1 var(--display); letter-spacing: .06em; padding: 3px 5px; border-radius: 1px; vertical-align: 1px; margin-left: 4px; }
 .acts { display: flex; }
 .acts .link { font-size: .88rem; }
@@ -215,16 +212,7 @@ th:first-child, td:first-child { padding-left: 0; }
 th:last-child, td:last-child { padding-right: 0; }
 td.n, th.n { text-align: right; }
 td.n { font: 600 1.05rem var(--display); font-variant-numeric: tabular-nums; }
-@media (max-width: 420px) { .vol-col { display: none; } }
 
-.totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.total { display: flex; flex-direction: column; gap: 4px; padding-left: 12px; border-left: 1px solid var(--rule); min-width: 0; }
-.total:first-child { padding-left: 0; border-left: none; }
-.total .v { font: 700 1.7rem/1 var(--display); font-variant-numeric: tabular-nums; }
-.vl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; padding: 7px 0; }
-.vl .num { font-size: 1.05rem; font-weight: 600; }
-.vbar { grid-column: 1 / -1; height: 6px; background: var(--raised); }
-.vbar span { display: block; height: 100%; background: var(--muted); }
 
 .ms { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--rule); }
 .ms:first-child { border-top: none; }
@@ -320,7 +308,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
             </div>
           </div>
         </div>
-        <p class="preview" id="preview"></p>
         <div class="plates" id="plates"></div>
       </div>
 
@@ -359,7 +346,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     </div>
 
     <div class="sec">
-      <div class="sec-head"><h2>Lifts</h2><span>Best e1RM this week</span></div>
+      <div class="sec-head"><h2>Personal records</h2><span>Heaviest weight</span></div>
       <div class="rows" id="lift-rows"></div>
     </div>
 
@@ -368,19 +355,13 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       <div class="chart-box" id="chart"></div>
       <div class="legend" id="legend" hidden>
         <span><i><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="3.5" fill="var(--ink)"/></svg></i>Weekly best</span>
-        <span><i><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--yellow)" stroke="var(--ink)" stroke-width="1.5"/></svg></i>New all-time best (PR)</span>
+        <span><i><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--yellow)" stroke="var(--ink)" stroke-width="1.5"/></svg></i>Best week yet</span>
       </div>
     </div>
 
     <div class="sec">
       <div class="sec-head"><h2>Week by week</h2><span>Mon – Sun</span></div>
       <div id="weeks"></div>
-    </div>
-
-    <div class="sec">
-      <div class="sec-head"><h2>Volume</h2><span>kg × reps, every set</span></div>
-      <div class="totals" id="totals"></div>
-      <div id="vol-lifts"></div>
     </div>
 
     <div class="sec">
@@ -436,8 +417,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       <li>80 kg × 10 the next week → <b class="num">106.7</b>, so <b>+5.3 kg</b> stronger</li>
       <li>85 kg × 8 instead → <b class="num">107.7</b>, so <b>+6.3 kg</b> stronger</li>
     </ul>
-    <p class="small muted">Each week counts your best set per lift. A PR is a set that beats your best ever for that lift.</p>
-    <p class="small muted"><b>Volume</b> is different: it adds up kg × reps for every set you did. 200 kg × 8 reps, done twice, is 3,200 kg of volume.</p>
+    <p class="small muted">Each week counts your best set per lift.</p>
+    <p class="small muted">Your <b>PR</b> on a lift is simply the heaviest weight you've lifted on it. Same weight for more reps counts too.</p>
     <div class="sheet-btns"><button type="button" class="primary" id="info-close">Got it</button></div>
   </div>
 </dialog>
@@ -508,7 +489,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   const kg1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
   const kgTrim = (n) => String(Math.round(n * 100) / 100);
   const signed = (n) => (n > 0.05 ? "+" : n < -0.05 ? "−" : "±") + kg1(Math.abs(n));
-  const vol = (s) => s.weightKg * s.reps * (s.sets || 1);
   const bySetOrder = (a, b) => a.date.localeCompare(b.date) || (a.createdAt || 0) - (b.createdAt || 0);
   const kgInt = (n) => Math.round(n).toLocaleString();
 
@@ -568,10 +548,10 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       if (s.exercise !== ex) continue;
       const start = weekStart(s.date), key = toKey(start);
       let w = map.get(key);
-      if (!w) { w = { key, start, best: -1, top: null, volume: 0 }; map.set(key, w); }
+      if (!w) { w = { key, start, best: -1, top: null, heavy: s }; map.set(key, w); }
       const score = e1rm(s.weightKg, s.reps);
       if (score > w.best) { w.best = score; w.top = s; }
-      w.volume += vol(s);
+      if (heavier(s, w.heavy)) w.heavy = s;
     }
     const weeks = [...map.values()].sort((a, b) => a.start - b.start);
     let allTime = -1;
@@ -583,13 +563,16 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     return weeks;
   }
 
+  // A PR is the heaviest weight you've lifted on a lift; at the same weight, more reps also counts.
+  const heavier = (a, b) => a.weightKg > b.weightKg || (a.weightKg === b.weightKg && a.reps > b.reps);
+  const bestSet = (list) => list.reduce((top, s) => (!top || heavier(s, top) ? s : top), null);
   // Sets that beat every earlier set of the same lift. The first set of a lift is its baseline.
   function prIds() {
     const ids = new Set(), best = new Map();
     for (const s of [...state.sets].sort(bySetOrder)) {
-      const sc = e1rm(s.weightKg, s.reps);
-      if (best.has(s.exercise) && sc > best.get(s.exercise) + 1e-9) ids.add(s.id);
-      if (!best.has(s.exercise) || sc > best.get(s.exercise)) best.set(s.exercise, sc);
+      const top = best.get(s.exercise);
+      if (top && heavier(s, top)) ids.add(s.id);
+      if (!top || heavier(s, top)) best.set(s.exercise, s);
     }
     return ids;
   }
@@ -613,10 +596,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   function stats() {
     const prs = prIds();
     const { cur, longest, weeks } = streaks();
-    const total = state.sets.reduce((t, s) => t + vol(s), 0);
-    const byDay = new Map(), liftsByWeek = new Map(), firstWeekBest = new Map(), bestEver = new Map();
+    const liftsByWeek = new Map(), firstWeekBest = new Map(), bestEver = new Map();
     for (const s of state.sets) {
-      byDay.set(s.date, (byDay.get(s.date) || 0) + vol(s));
       const wk = toKey(weekStart(s.date));
       if (!liftsByWeek.has(wk)) liftsByWeek.set(wk, new Set());
       liftsByWeek.get(wk).add(s.exercise);
@@ -626,10 +607,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     let maxGain = 0;
     for (const [ex, b] of bestEver) maxGain = Math.max(maxGain, b - (firstWeekBest.get(ex) || b));
     return {
-      prs, prCount: prs.size, streak: cur, longest, trainedWeeks: weeks, total,
-      maxDay: Math.max(0, ...byDay.values()),
+      prs, prCount: prs.size, streak: cur, longest, trainedWeeks: weeks,
       maxLifts: Math.max(0, ...[...liftsByWeek.values()].map((x) => x.size)),
-      maxE1rm: Math.max(0, ...bestEver.values()), maxGain,
+      maxWeight: Math.max(0, ...state.sets.map((s) => s.weightKg)), maxGain,
     };
   }
 
@@ -639,12 +619,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     { id: "streak12", name: "12-Week Streak", desc: "Train 12 weeks in a row", prog: (s) => [s.longest, 12] },
     { id: "pr5", name: "PR Hunter", desc: "Set 5 PRs", prog: (s) => [s.prCount, 5] },
     { id: "pr25", name: "PR Machine", desc: "Set 25 PRs", prog: (s) => [s.prCount, 25] },
-    { id: "century", name: "Century", desc: "Hit a 100 kg e1RM", kg: true, prog: (s) => [s.maxE1rm, 100] },
-    { id: "bigday", name: "Big Day", desc: "5,000 kg of volume in one day", kg: true, prog: (s) => [s.maxDay, 5000] },
-    { id: "k10", name: "10k Club", desc: "10,000 kg of volume in total", kg: true, prog: (s) => [s.total, 10000] },
-    { id: "k100", name: "100k Club", desc: "100,000 kg of volume in total", kg: true, prog: (s) => [s.total, 100000] },
+    { id: "century", name: "Century", desc: "Lift 100 kg", kg: true, prog: (s) => [s.maxWeight, 100] },
     { id: "rounded", name: "Well Rounded", desc: "Train 4 lifts in one week", prog: (s) => [s.maxLifts, 4] },
-    { id: "plus10", name: "+10 kg", desc: "Gain 10 kg e1RM on one lift", kg: true, prog: (s) => [s.maxGain, 10] },
+    { id: "plus10", name: "+10 kg", desc: "Get 10 kg stronger on one lift", kg: true, prog: (s) => [s.maxGain, 10] },
   ];
   const earnedIds = (st) => BADGES.filter((b) => { const [c, g] = b.prog(st); return c >= g; }).map((b) => b.id);
 
@@ -797,7 +774,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   }
   function updatePreview() {
     const w = parseFloat($("#weight").value), r = parseInt($("#reps").value, 10);
-    $("#preview").innerHTML = w > 0 && r >= 1 ? `This set: e1RM <b>${kg1(e1rm(w, r))} kg</b>` : `Set the weight and reps.`;
     renderPlates();
     renderBeat();
   }
@@ -813,13 +789,13 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
         n += k;
         return `<div class="set-row${s.id === state.editingId ? " editing" : ""}">
           <span class="sn">${label}</span>
-          <span class="ld">${kgTrim(s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}<span class="e">e1RM ${kg1(e1rm(s.weightKg, s.reps))}</span></span>
+          <span class="ld">${kgTrim(s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}</span>
           <span class="acts">
             <button type="button" class="link" data-edit="${esc(s.id)}" aria-label="Edit ${esc(ex)} set ${label}">Edit</button>
             <button type="button" class="link danger" data-del="${esc(s.id)}" aria-label="Delete ${esc(ex)} set ${label}">Delete</button>
           </span></div>`;
       }).join("");
-      return `<div class="lift-group"><div class="lg-head"><b>${esc(ex)}</b><span>${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"} · ${kgInt(list.reduce((t, s) => t + vol(s), 0))} kg</span></div>${rows}</div>`;
+      return `<div class="lift-group"><div class="lg-head"><b>${esc(ex)}</b><span>${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"}</span></div>${rows}</div>`;
     }).join("");
   }
   function renderToday(prs) {
@@ -827,15 +803,15 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const r = activeRoutine();
     const routineDone = r && list.length && r.lifts.every((ex) => list.some((s) => s.exercise === ex));
     $("#today-sum").textContent = routineDone ? `${r.name} done ✓`
-      : list.length ? `${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"} · ${kgInt(list.reduce((a, s) => a + vol(s), 0))} kg volume` : "";
+      : list.length ? `${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"}` : "";
     $("#today-list").innerHTML = list.length ? liftGroups(list, prs)
       : `<p class="empty"><strong>Nothing logged today.</strong>Pick a lift, set the weight and reps, then tap Log set. Log each set as you finish it.</p>`;
   }
 
   // ---------- Render: Progress tab ----------
-  function spark(weeks) {
-    if (weeks.length < 2) return `<svg viewBox="0 0 64 24" aria-hidden="true"><line x1="2" x2="62" y1="12" y2="12" stroke="var(--rule-strong)" stroke-dasharray="2 3"/></svg>`;
-    const v = weeks.map((w) => w.best), lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
+  function spark(v) {
+    if (v.length < 2) return `<svg viewBox="0 0 64 24" aria-hidden="true"><line x1="2" x2="62" y1="12" y2="12" stroke="var(--rule-strong)" stroke-dasharray="2 3"/></svg>`;
+    const lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
     const pts = v.map((b, i) => [3 + (i / (v.length - 1)) * 58, 21 - ((b - lo) / span) * 18]);
     const d = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
     const e = pts.at(-1);
@@ -870,31 +846,18 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const ce = chartEx();
     const withData = all.filter((x) => x.weeks.length);
     $("#lift-rows").innerHTML = withData.length ? withData.map((x) => {
-      const last = x.weeks.at(-1);
-      const since = x.weeks.length >= 2 ? `${signed(last.best - x.weeks[0].best)} kg since start` : "First week";
+      const pr = bestSet(state.sets.filter((s) => s.exercise === x.ex).sort(bySetOrder));
+      const gain = x.weeks.length >= 2 ? pr.weightKg - x.weeks[0].heavy.weightKg : null;
       return `<button type="button" class="lift-row" data-ex="${esc(x.ex)}" aria-pressed="${x.ex === ce}">
-        <span class="lr-name">${esc(x.ex)}<small>${since}</small></span>
-        ${spark(x.weeks)}
-        <span class="lr-val"><span>${kg1(last.best)} <small>kg</small></span>${last.delta != null ? delta(last.delta) : ""}</span>
+        <span class="lr-name">${esc(x.ex)}<small>Set ${pr.date === todayKey() ? "today" : dayLabel(pr.date)}</small></span>
+        ${spark(x.weeks.map((w) => w.heavy.weightKg))}
+        <span class="lr-val"><span>${kgTrim(pr.weightKg)} <small>kg × ${pr.reps}</small></span>${gain != null ? delta(gain) : ""}</span>
       </button>`;
-    }).join("") : `<p class="empty">Lifts you log show up here with their weekly trend.</p>`;
+    }).join("") : `<p class="empty">Your heaviest lift for each exercise shows up here.</p>`;
 
     const sel = all.find((x) => x.ex === ce);
     renderChart(sel ? sel.weeks : []);
     renderWeeks(sel ? sel.weeks : []);
-
-    const now = new Date(), wk = toKey(weekStart(todayKey())), mo = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
-    const thisWeek = state.sets.filter((s) => toKey(weekStart(s.date)) === wk);
-    const sum = (list) => list.reduce((t, s) => t + vol(s), 0);
-    const rows = [["This week", sum(thisWeek)], ["This month", sum(state.sets.filter((s) => s.date.startsWith(mo)))], ["All time", st.total]];
-    $("#totals").innerHTML = rows.map(([l, v]) => `<div class="total"><span class="v">${kgInt(v)}</span><span class="lbl">${l}, kg</span></div>`).join("");
-    const per = new Map();
-    for (const s of thisWeek) per.set(s.exercise, (per.get(s.exercise) || 0) + vol(s));
-    const perList = [...per].sort((a, b) => b[1] - a[1]);
-    const max = perList.length ? perList[0][1] : 1;
-    $("#vol-lifts").innerHTML = perList.length
-      ? `<span class="lbl">This week by lift</span>` + perList.map(([ex, v]) => `<div class="vl"><span>${esc(ex)}</span><span class="num">${kgInt(v)} kg</span><span class="vbar" aria-hidden="true"><span style="width:${((v / max) * 100).toFixed(1)}%"></span></span></div>`).join("")
-      : `<p class="small muted">Nothing logged this week yet.</p>`;
 
     const earned = new Set(earnedIds(st));
     $("#badge-count").textContent = `${earned.size} of ${BADGES.length}`;
@@ -966,7 +929,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       tip.hidden = false;
       tip.style.left = Math.min(Math.max((p[0] / W) * r.width, 80), r.width - 80) + "px";
       tip.style.top = (p[1] / H) * r.height + "px";
-      tip.innerHTML = `<span class="muted">${weekLabel(w.start)}</span><br><b>${kg1(w.best)} kg</b> e1RM${w.isPR ? " · PR" : ""}<br>Top set ${kgTrim(w.top.weightKg)} kg × ${w.top.reps}${w.delta != null ? `<br>${signed(w.delta)} kg vs previous week` : ""}`;
+      tip.innerHTML = `<span class="muted">${weekLabel(w.start)}</span><br><b>${kg1(w.best)} kg</b> e1RM${w.isPR ? " · best yet" : ""}<br>Top set ${kgTrim(w.top.weightKg)} kg × ${w.top.reps}${w.delta != null ? `<br>${signed(w.delta)} kg vs previous week` : ""}`;
     };
     hit.addEventListener("pointermove", move);
     hit.addEventListener("pointerdown", move);
@@ -975,13 +938,12 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   function renderWeeks(weeks) {
     const el = $("#weeks");
     if (!weeks.length) { el.innerHTML = `<p class="muted small">Weeks for ${esc(chartEx() || "this lift")} appear here once you log a set.</p>`; return; }
-    el.innerHTML = `<table><thead><tr><th>Week</th><th class="n">Top set</th><th class="n">e1RM</th><th class="n">Change</th><th class="n vol-col">Volume</th></tr></thead><tbody>${
+    el.innerHTML = `<table><thead><tr><th>Week</th><th class="n">Top set</th><th class="n">e1RM</th><th class="n">Change</th></tr></thead><tbody>${
       [...weeks].reverse().map((w) => `<tr>
         <td>${weekLabel(w.start)}</td>
         <td class="n">${kgTrim(w.top.weightKg)} × ${w.top.reps}</td>
         <td class="n">${kg1(w.best)}</td>
-        <td class="n">${w.delta == null ? `<span class="muted small">baseline</span>` : delta(w.delta)}</td>
-        <td class="n vol-col">${kgInt(w.volume)}</td></tr>`).join("")
+        <td class="n">${w.delta == null ? `<span class="muted small">baseline</span>` : delta(w.delta)}</td></tr>`).join("")
     }</tbody></table>`;
   }
 
@@ -995,7 +957,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const days = new Map();
     for (const s of list) { if (!days.has(s.date)) days.set(s.date, []); days.get(s.date).push(s); }
     $("#history").innerHTML = [...days].map(([d, items]) => `<div>
-      <div class="day-head"><h3>${dayLabel(d)}</h3><span>${kgInt(items.reduce((t, s) => t + vol(s), 0))} kg volume</span></div>
+      <div class="day-head"><h3>${dayLabel(d)}</h3><span>${setCount(items)} ${setCount(items) === 1 ? "set" : "sets"}</span></div>
       ${liftGroups(items, prs)}</div>`).join("");
   }
 
@@ -1048,20 +1010,19 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     return fresh.map((id) => BADGES.find((b) => b.id === id));
   }
   function logSet(f) {
-    const prev = state.sets.filter((s) => s.exercise === f.exercise);
-    const prevBest = Math.max(-1, ...prev.map((s) => e1rm(s.weightKg, s.reps)));
+    const prevTop = bestSet(state.sets.filter((s) => s.exercise === f.exercise));
     const gainBefore = parseFloat($("#gain-num").dataset.v) || 0;
     const entry = { ...f, id: newId(), createdAt: Date.now() };
     const before = state.sets;
     state.sets = [...state.sets, entry];
     try { save(); } catch (e) { state.sets = before; throw e; }
-    const score = e1rm(f.weightKg, f.reps);
-    const isPR = prev.length > 0 && score > prevBest + 1e-9;
+    const isPR = !!prevTop && heavier(f, prevTop);
     const newBadges = celebrate(prefs.seenBadges || []);
     render();
     if (isPR) {
       buzz([40, 60, 40]); flash(); animateGain(gainBefore);
-      toast(`<b>PR</b> · ${esc(f.exercise)} ${kg1(score)} kg (+${kg1(score - prevBest)})`, { kind: "pr", ms: 4500 });
+      const why = f.weightKg > prevTop.weightKg ? `heaviest ever, +${kgTrim(f.weightKg - prevTop.weightKg)} kg` : `most reps at ${kgTrim(f.weightKg)} kg`;
+      toast(`<b>PR</b> · ${esc(f.exercise)} ${kgTrim(f.weightKg)} kg × ${f.reps}, ${why}`, { kind: "pr", ms: 4500 });
     } else {
       buzz(20);
       toast(`Set ${setCount(setsOn(f.exercise, f.date))} logged: <b>${kgTrim(f.weightKg)} × ${f.reps}</b>`, { ms: 1800 });
