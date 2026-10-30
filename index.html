@@ -89,7 +89,9 @@ button.link.danger { color: var(--down); }
 input { font: 500 1rem var(--body); color: var(--ink); background: var(--raised); border: 1px solid var(--rule-strong); border-radius: 2px; padding: 10px 12px; width: 100%; min-width: 0; }
 .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .lbl-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.add-ex { display: flex; gap: 8px; }
+.add-ex { display: flex; flex-wrap: wrap; gap: 8px; }
+.bw-check { flex-basis: 100%; display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); cursor: pointer; }
+.bw-check input, .bw-toggle input { width: 20px; height: 20px; margin: 0; accent-color: var(--yellow); }
 .add-ex input { flex: 1; }
 
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * var(--gut)); padding-inline: var(--gut); }
@@ -224,6 +226,28 @@ td.n { font: 600 1.05rem var(--display); font-variant-numeric: tabular-nums; }
 .ms-t small { color: var(--muted); font-size: .82rem; }
 .ms-p { font: 600 .98rem var(--display); color: var(--muted); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
+/* Training calendar */
+.cal { display: flex; flex-direction: column; gap: 8px; padding-bottom: 6px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cal-head h3 { font-size: 1.15rem; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav button { width: 40px; height: 36px; padding: 0; font: 700 1.2rem/1 var(--display); }
+.cal-nav button:disabled { opacity: .35; cursor: default; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-grid .dow { font: 600 .78rem var(--display); color: var(--muted); text-align: center; letter-spacing: .06em; }
+.cal-day { height: 38px; display: grid; place-items: center; font: 600 1rem var(--display); font-variant-numeric: tabular-nums; color: var(--muted); background: transparent; border: 1.5px solid transparent; border-radius: 2px; padding: 0; }
+button.cal-day.on { background: var(--yellow); color: var(--on-yellow); border-color: var(--yellow); }
+.cal-day.today { border-color: var(--ink); color: var(--ink); }
+button.cal-day.on.today { box-shadow: inset 0 0 0 2px var(--on-yellow); }
+.cal-foot { color: var(--muted); font-size: .88rem; }
+
+/* Body weight */
+.body-form { display: flex; gap: 8px; }
+.body-form input { flex: 1; font: 700 1.35rem var(--display); font-variant-numeric: tabular-nums; }
+#body-latest b { font: 700 1.25rem var(--display); }
+.bw-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 18px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.bw-row .num { font-size: 1.1rem; font-weight: 600; }
+
 .backup-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Tab bar */
@@ -256,6 +280,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
 .sheet-btns .danger { margin-right: auto; }
 .sheet-btns .primary { font-size: 1.15rem; padding: 12px 18px; }
 .pick-list { display: flex; flex-direction: column; }
+.lm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--rule); }
+.lm-row input.lm-name { padding: 8px 10px; }
+.lm-row.hidden-lift input.lm-name { color: var(--muted); }
+.bw-toggle { display: flex; align-items: center; gap: 6px; font: 600 .9rem var(--display); letter-spacing: .04em; color: var(--muted); cursor: pointer; }
+.lm-group { padding: 14px 0 4px; }
 .pick { display: flex; align-items: center; gap: 12px; background: transparent; border: none; border-top: 1px solid var(--rule); border-radius: 0; padding: 11px 2px; text-align: left; font-weight: 500; }
 .pick .ord { width: 26px; height: 26px; flex: none; border: 1.5px solid var(--rule-strong); display: grid; place-items: center; font: 700 .95rem var(--display); }
 .pick[aria-pressed="true"] .ord { background: var(--ink); color: var(--bg); border-color: var(--ink); }
@@ -277,11 +306,12 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
         <div class="chips" id="routines" role="group" aria-labelledby="routine-label"></div>
       </div>
       <div class="field">
-        <span class="lbl" id="ex-label">Lift</span>
+        <div class="lbl-row"><span class="lbl" id="ex-label">Lift</span><button type="button" class="link small" id="edit-lifts">Edit lifts</button></div>
         <div class="chips" id="chips" role="group" aria-labelledby="ex-label"></div>
         <div class="add-ex" id="add-ex-row" hidden>
           <input id="new-ex-name" type="text" placeholder="e.g. Leg Press" maxlength="40" aria-label="New lift name">
           <button type="button" id="add-ex-btn">Add</button>
+          <label class="bw-check"><input type="checkbox" id="new-ex-bw"> Bodyweight lift (pull-ups, dips, push-ups)</label>
         </div>
       </div>
     </div>
@@ -351,6 +381,18 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     </div>
 
     <div class="sec">
+      <div class="sec-head"><h2>Body weight</h2><span>Weigh in once a week</span></div>
+      <form class="body-form" id="body-form" novalidate>
+        <input id="body-kg" type="number" inputmode="decimal" step="0.1" min="20" max="400" placeholder="kg" aria-label="Your body weight today, in kg">
+        <button type="submit">Save today</button>
+      </form>
+      <p class="status" id="body-status" role="status" aria-live="polite"></p>
+      <p id="body-latest"></p>
+      <div class="chart-box" id="body-chart"></div>
+      <div id="body-list"></div>
+    </div>
+
+    <div class="sec">
       <div class="sec-head"><h2>Heaviest each week</h2><span id="chart-sub"></span></div>
       <div class="chart-box" id="chart"></div>
       <div class="legend" id="legend" hidden>
@@ -374,6 +416,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   <section class="tab" id="tab-history" aria-labelledby="tb-history" hidden>
     <div class="sec first">
       <div class="sec-head"><h2>History</h2><span id="hist-count"></span></div>
+      <div class="cal" id="cal"></div>
       <div id="history" class="days"></div>
       <button type="button" class="link" id="show-more" hidden>Show older sets</button>
     </div>
@@ -420,6 +463,16 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   </div>
 </dialog>
 
+<dialog id="lifts-sheet" aria-labelledby="lifts-h">
+  <div class="sheet">
+    <h2 id="lifts-h">Your lifts</h2>
+    <p class="small muted">Rename a lift and its history follows. Hide a lift to take it off the list; its history and PRs stay. Tick BW for bodyweight lifts.</p>
+    <div id="lift-manage"></div>
+    <p class="status err" id="lifts-status" role="status" aria-live="polite"></p>
+    <div class="sheet-btns"><button type="button" class="primary" id="lifts-done">Done</button></div>
+  </div>
+</dialog>
+
 <dialog id="routine-sheet" aria-labelledby="routine-h">
   <form class="sheet" id="routine-form" novalidate>
     <h2 id="routine-h">New routine</h2>
@@ -433,6 +486,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       <div class="add-ex">
         <input id="routine-new" type="text" maxlength="40" placeholder="Another lift, e.g. RDL" aria-label="New lift name">
         <button type="button" id="routine-new-btn">Add</button>
+        <label class="bw-check"><input type="checkbox" id="routine-new-bw"> Bodyweight lift</label>
       </div>
     </div>
     <p class="status err" id="routine-status" role="status" aria-live="polite"></p>
@@ -454,28 +508,33 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   const PREFS_KEY = "lift-tracker:prefs";
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const state = { sets: [], customEx: [], routines: [], selected: null, chartEx: null, editingId: null, dateOpen: false, histLimit: 40, draft: null };
+  const state = { sets: [], customEx: [], routines: [], hidden: [], body: [], calMonth: null, selected: null, chartEx: null, editingId: null, dateOpen: false, histLimit: 40, draft: null };
   let prefs = { tab: "log", barKg: 20, seenBadges: null, routineId: null };
 
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ---------- Storage (on this device only) ----------
-  const validSet = (s) => s && typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && s.exercise && s.weightKg > 0 && s.reps >= 1;
+  const validSet = (s) => s && typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && s.exercise && Number.isFinite(s.weightKg) && s.weightKg >= 0 && s.reps >= 1;
   const cleanRoutine = (r) => (r && typeof r.id === "string" && typeof r.name === "string" && r.name.trim() && Array.isArray(r.lifts)
     ? { id: r.id, name: r.name.trim().slice(0, 30), lifts: r.lifts.filter((x) => typeof x === "string" && x) } : null);
   const cleanRoutines = (list) => (Array.isArray(list) ? list.map(cleanRoutine).filter((r) => r && r.lifts.length) : []);
+  const cleanHidden = (list) => (Array.isArray(list) ? [...new Set(list.filter((x) => typeof x === "string" && x))] : []);
+  const cleanBody = (list) => (Array.isArray(list) ? list.filter((b) => b && /^\d{4}-\d{2}-\d{2}$/.test(b.date) && b.kg > 0 && b.kg < 500) : []);
   function load() {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
       state.sets = (raw.sets || []).filter(validSet);
       state.customEx = (raw.exercises || []).filter((e) => e && e.name);
       state.routines = cleanRoutines(raw.routines);
-    } catch (_) { state.sets = []; state.customEx = []; state.routines = []; }
+      state.hidden = cleanHidden(raw.hidden);
+      state.body = cleanBody(raw.bodyweight);
+    } catch (_) { state.sets = []; state.customEx = []; state.routines = []; state.hidden = []; state.body = []; }
     try { prefs = { ...prefs, ...JSON.parse(localStorage.getItem(PREFS_KEY) || "{}") }; } catch (_) {}
   }
+  const snapshot = () => ({ version: 1, sets: state.sets, exercises: state.customEx, routines: state.routines, hidden: state.hidden, bodyweight: state.body });
   function save() {
-    localStorage.setItem(KEY, JSON.stringify({ version: 1, sets: state.sets, exercises: state.customEx, routines: state.routines }));
+    localStorage.setItem(KEY, JSON.stringify(snapshot()));
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   }
   function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (_) {} }
@@ -512,6 +571,13 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     for (const s of state.sets) if (!names.includes(s.exercise)) names.push(s.exercise);
     return names;
   }
+  // Lifts offered for logging and in the routine editor; hidden ones keep their history elsewhere.
+  const visibleLifts = () => exerciseList().filter((n) => !state.hidden.includes(n));
+  const liftPool = () => (visibleLifts().length ? visibleLifts() : exerciseList());
+  const isBW = (ex) => state.customEx.some((e) => e.name === ex && e.bodyweight);
+  // "200" for a barbell lift; "BW" or "BW +10" for a bodyweight lift.
+  const wt = (ex, w) => (isBW(ex) || w === 0 ? (w > 0 ? `BW +${kgTrim(w)}` : "BW") : kgTrim(w));
+  const wtKg = (ex, w) => (isBW(ex) || w === 0 ? `${wt(ex, w)}${w > 0 ? " kg" : ""}` : `${kgTrim(w)} kg`);
   const lastSetOf = (ex) => state.sets.filter((s) => s.exercise === ex).sort(bySetOrder).at(-1) || null;
   const setsOn = (ex, date) => state.sets.filter((s) => s.exercise === ex && s.date === date).sort(bySetOrder);
   const setCount = (list) => list.reduce((n, s) => n + (s.sets || 1), 0);
@@ -529,8 +595,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const flat = list.flatMap((s) => Array(Math.min(s.sets || 1, 20)).fill(s));
     if (!flat.length) return "";
     return flat.every((s) => s.weightKg === flat[0].weightKg)
-      ? `${kgTrim(flat[0].weightKg)} kg × ${flat.map((s) => s.reps).join(" · ")}`
-      : flat.map((s) => `${kgTrim(s.weightKg)}×${s.reps}`).join(" · ");
+      ? `${wtKg(flat[0].exercise, flat[0].weightKg)} × ${flat.map((s) => s.reps).join(" · ")}`
+      : flat.map((s) => `${wt(s.exercise, s.weightKg)}×${s.reps}`).join(" · ");
   }
 
   const activeRoutine = () => state.routines.find((r) => r.id === prefs.routineId) || null;
@@ -631,6 +697,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     return { list, exact, nearest };
   }
   function renderPlates() {
+    $("#plates").hidden = isBW(state.selected);
+    $("#weight-l").textContent = isBW(state.selected) ? "added kg" : "kg";
     const w = parseFloat($("#weight").value), bar = prefs.barKg;
     const r = platesFor(w, bar);
     const toggle = `<button type="button" class="bar-toggle" id="bar-toggle" aria-label="Bar weight ${bar} kg, tap to change">Bar ${bar} kg</button>`;
@@ -701,7 +769,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   }
   function renderChips() {
     const r = activeRoutine();
-    const names = r ? r.lifts : exerciseList();
+    const names = r ? r.lifts : liftPool();
     $("#chips").innerHTML = names.map((n) => {
       const done = r && doneToday(n);
       return `<button type="button" class="chip${done ? " done" : ""}" data-ex="${esc(n)}" aria-pressed="${n === state.selected}">${done ? `<span aria-hidden="true">✓ </span>` : ""}${esc(n)}${done ? `<span class="sr">, done today</span>` : ""}</button>`;
@@ -718,7 +786,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   }
   function fillFromLast(ex) {
     const last = lastSetOf(ex);
-    $("#weight").value = last ? last.weightKg : "";
+    $("#weight").value = last ? last.weightKg : isBW(ex) ? 0 : "";
     $("#reps").value = last ? last.reps : "";
   }
   function renderDate() {
@@ -754,7 +822,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const t = last.top;
     const targets = [
       { w: t.weightKg, r: t.reps + 1, why: "Same weight, +1 rep" },
-      { w: Math.round((t.weightKg + 2.5) * 100) / 100, r: t.reps, why: "+2.5 kg, same reps" },
+      { w: Math.round((t.weightKg + 2.5) * 100) / 100, r: t.reps, why: isBW(state.selected) ? "+2.5 kg added, same reps" : "+2.5 kg, same reps" },
     ];
     let verdict = "";
     if (valid) {
@@ -765,7 +833,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     box.innerHTML = `<div class="sec-head"><h2>Last time</h2><span>${dayLabel(last.date)}</span></div>
       <div class="last-sets">${summary(last.sets)}</div>
       <span class="lbl">Beat it</span>
-      <div class="targets">${targets.map((x) => `<button type="button" class="target" data-w="${x.w}" data-r="${x.r}" aria-pressed="${valid && x.w === w && x.r === r}"><b>${kgTrim(x.w)} × ${x.r}</b><small>${x.why}</small></button>`).join("")}</div>
+      <div class="targets">${targets.map((x) => `<button type="button" class="target" data-w="${x.w}" data-r="${x.r}" aria-pressed="${valid && x.w === w && x.r === r}"><b>${wt(state.selected, x.w)} × ${x.r}</b><small>${x.why}</small></button>`).join("")}</div>
       <p class="verdict">${verdict}</p>`;
   }
   function updatePreview() {
@@ -785,7 +853,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
         n += k;
         return `<div class="set-row${s.id === state.editingId ? " editing" : ""}">
           <span class="sn">${label}</span>
-          <span class="ld">${kgTrim(s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}</span>
+          <span class="ld">${wt(s.exercise, s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}</span>
           <span class="acts">
             <button type="button" class="link" data-edit="${esc(s.id)}" aria-label="Edit ${esc(ex)} set ${label}">Edit</button>
             <button type="button" class="link danger" data-del="${esc(s.id)}" aria-label="Delete ${esc(ex)} set ${label}">Delete</button>
@@ -847,13 +915,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       return `<button type="button" class="lift-row" data-ex="${esc(x.ex)}" aria-pressed="${x.ex === ce}">
         <span class="lr-name">${esc(x.ex)}<small>Set ${pr.date === todayKey() ? "today" : dayLabel(pr.date)}</small></span>
         ${spark(x.weeks.map((w) => w.best))}
-        <span class="lr-val"><span>${kgTrim(pr.weightKg)} <small>kg × ${pr.reps}</small></span>${x.weeks.length >= 2 ? `<span class="dl">${change(pr, x.weeks[0].top)}</span>` : ""}</span>
+        <span class="lr-val"><span>${wt(x.ex, pr.weightKg)} <small>${pr.weightKg > 0 ? "kg " : ""}× ${pr.reps}</small></span>${x.weeks.length >= 2 ? `<span class="dl">${change(pr, x.weeks[0].top)}</span>` : ""}</span>
       </button>`;
     }).join("") : `<p class="empty">Your heaviest lift for each exercise shows up here.</p>`;
 
     const sel = all.find((x) => x.ex === ce);
     renderChart(sel ? sel.weeks : []);
     renderWeeks(sel ? sel.weeks : []);
+    renderBody();
 
     const earned = new Set(earnedIds(st));
     $("#badge-count").textContent = `${earned.size} of ${BADGES.length}`;
@@ -865,6 +934,59 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
         <span class="ms-p">${on ? "Done" : `${fmt(Math.min(c, g))} / ${fmt(g)}${b.kg ? " kg" : ""}`}</span></div>`;
     }).join("");
   }
+
+  // ---------- Body weight ----------
+  const bodySorted = () => [...state.body].sort((a, b) => a.date.localeCompare(b.date));
+  function renderBody() {
+    const list = bodySorted(), last = list.at(-1), prev = list.at(-2);
+    const inp = $("#body-kg");
+    if (last && !inp.value && document.activeElement !== inp) inp.value = kgTrim(last.kg);
+    if (!last) {
+      $("#body-latest").innerHTML = `<span class="muted">Weigh in once a week, same time of day, and the trend shows here.</span>`;
+      $("#body-chart").innerHTML = ""; $("#body-list").innerHTML = "";
+      return;
+    }
+    // Body weight going up or down isn't good or bad here, so the marker stays ink-coloured.
+    const d = prev ? Math.round((last.kg - prev.kg) * 10) / 10 : null;
+    $("#body-latest").innerHTML = `<b>${kgTrim(last.kg)} kg</b> <span class="muted">· ${dayLabel(last.date)}${d == null ? "" : ` · ${d > 0 ? "▲ +" : d < 0 ? "▼ −" : "= "}${kgTrim(Math.abs(d))} kg since ${short(parse(prev.date))}`}</span>`;
+    const pts = list.slice(-12);
+    const box = $("#body-chart");
+    if (pts.length < 2) box.innerHTML = "";
+    else {
+      const W = Math.max(280, box.clientWidth || 520), H = 140, m = { l: 36, r: 14, t: 18, b: 24 };
+      const vals = pts.map((b) => b.kg), lo = Math.floor(Math.min(...vals)) - 1, hi = Math.ceil(Math.max(...vals)) + 1;
+      const x = (i) => m.l + (i / (pts.length - 1)) * (W - m.l - m.r), y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+      const mid = Math.round((lo + hi) / 2);
+      const grid = [lo, mid, hi].map((v) => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+      const path = pts.map((b, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(b.kg).toFixed(1)}`).join("");
+      const dots = pts.map((b, i) => `<circle cx="${x(i)}" cy="${y(b.kg)}" r="${i === pts.length - 1 ? 4.5 : 3}" fill="var(--ink)" stroke="var(--bg)" stroke-width="2"><title>${dayLabel(b.date)}: ${kgTrim(b.kg)} kg</title></circle>`).join("");
+      box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Body weight, ${pts.length} weigh-ins from ${short(parse(pts[0].date))} to ${short(parse(last.date))}">
+        ${grid}<text x="${m.l}" y="${H - 6}">${short(parse(pts[0].date))}</text><text x="${W - m.r}" y="${H - 6}" text-anchor="end">${short(parse(last.date))}</text>
+        <path d="${path}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
+    }
+    $("#body-list").innerHTML = [...list].reverse().slice(0, 5).map((b) => `<div class="bw-row"><span>${dayLabel(b.date)}</span><span class="num">${kgTrim(b.kg)} kg</span>
+      <button type="button" class="link danger" data-bdel="${b.date}" aria-label="Delete weigh-in from ${dayLabel(b.date)}">Delete</button></div>`).join("");
+  }
+  const bodySay = (msg, isErr) => { const el = $("#body-status"); el.textContent = msg; el.classList.toggle("err", !!isErr); };
+  $("#body-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const kg = parseFloat($("#body-kg").value);
+    if (!(kg >= 20 && kg <= 400)) return bodySay("Enter your body weight in kg.", true);
+    const before = state.body, today = todayKey();
+    state.body = [...state.body.filter((b) => b.date !== today), { date: today, kg: Math.round(kg * 10) / 10 }];
+    try { save(); } catch (err) { state.body = before; return bodySay(errText(err), true); }
+    bodySay(""); renderBody();
+    toast(`Saved body weight: <b>${kgTrim(kg)} kg</b>`, { ms: 2000 });
+  });
+  $("#body-list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-bdel]"); if (!b) return;
+    const gone = state.body.find((x) => x.date === b.dataset.bdel); if (!gone) return;
+    const before = state.body;
+    state.body = state.body.filter((x) => x !== gone);
+    try { save(); } catch (err) { state.body = before; return bodySay(errText(err), true); }
+    renderBody();
+    toast(`Deleted weigh-in from ${dayLabel(gone.date)}`, { ms: 5000, action: { label: "Undo", fn: () => { state.body = [...state.body, gone]; try { save(); } catch (_) {} renderBody(); } } });
+  });
 
   function niceStep(span) {
     const raw = span / 4;
@@ -913,7 +1035,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       <path d="${path}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       <line id="xhair" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="var(--rule-strong)" visibility="hidden"/>
       ${dots}
-      <text x="${last[0]}" y="${last[1] - 14}" text-anchor="${la}" style="fill: var(--ink); font-weight: 700; font-size: 13px">${kgTrim(vals.at(-1))} kg</text>
+      <text x="${last[0]}" y="${last[1] - 14}" text-anchor="${la}" style="fill: var(--ink); font-weight: 700; font-size: 13px">${wtKg(ex, vals.at(-1))}</text>
       <rect id="hit" x="${m.l - 10}" y="0" width="${iw + 20}" height="${H}" fill="transparent"/>
     </svg><div class="tip" id="tip" hidden></div>`;
     const svg = box.querySelector("svg"), tip = $("#tip"), xh = box.querySelector("#xhair"), hit = box.querySelector("#hit");
@@ -925,7 +1047,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       tip.hidden = false;
       tip.style.left = Math.min(Math.max((p[0] / W) * r.width, 80), r.width - 80) + "px";
       tip.style.top = (p[1] / H) * r.height + "px";
-      tip.innerHTML = `<span class="muted">${weekLabel(w.start)}</span><br><b>${kgTrim(w.top.weightKg)} kg × ${w.top.reps}</b>${w.isPR ? " · PR" : ""}${w.prev ? `<br>${change(w.top, w.prev)} vs previous week` : ""}`;
+      tip.innerHTML = `<span class="muted">${weekLabel(w.start)}</span><br><b>${wtKg(w.top.exercise, w.top.weightKg)} × ${w.top.reps}</b>${w.isPR ? " · PR" : ""}${w.prev ? `<br>${change(w.top, w.prev)} vs previous week` : ""}`;
     };
     hit.addEventListener("pointermove", move);
     hit.addEventListener("pointerdown", move);
@@ -937,13 +1059,49 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     el.innerHTML = `<table><thead><tr><th>Week</th><th class="n">Best set</th><th class="n">Change</th></tr></thead><tbody>${
       [...weeks].reverse().map((w) => `<tr>
         <td>${weekLabel(w.start)}</td>
-        <td class="n">${kgTrim(w.top.weightKg)} × ${w.top.reps}</td>
+        <td class="n">${wt(w.top.exercise, w.top.weightKg)} × ${w.top.reps}</td>
         <td class="n">${w.prev ? `<span class="dl">${change(w.top, w.prev)}</span>` : `<span class="muted small">baseline</span>`}</td></tr>`).join("")
     }</tbody></table>`;
   }
 
   // ---------- Render: History tab ----------
+  const FULL_MON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const thisMonth = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); };
+  function renderCal() {
+    const m = state.calMonth || thisMonth(), y = m.getFullYear(), mo = m.getMonth();
+    const counts = new Map();
+    for (const s of state.sets) counts.set(s.date, (counts.get(s.date) || 0) + (s.sets || 1));
+    const lead = (new Date(y, mo, 1).getDay() + 6) % 7, n = new Date(y, mo + 1, 0).getDate();
+    let cells = ["M", "T", "W", "T", "F", "S", "S"].map((d) => `<span class="dow" aria-hidden="true">${d}</span>`).join("") + "<span></span>".repeat(lead);
+    let trained = 0;
+    for (let d = 1; d <= n; d++) {
+      const key = `${y}-${pad(mo + 1)}-${pad(d)}`, c = counts.get(key), today = key === todayKey() ? " today" : "";
+      if (c) trained++;
+      cells += c ? `<button type="button" class="cal-day on${today}" data-day="${key}" aria-label="${dayLabel(key)}: ${c} ${c === 1 ? "set" : "sets"}">${d}</button>`
+        : `<span class="cal-day${today}">${d}</span>`;
+    }
+    const current = +m === +thisMonth();
+    $("#cal").innerHTML = `<div class="cal-head"><h3>${FULL_MON[mo]} ${y}</h3><div class="cal-nav">
+        <button type="button" data-cal="-1" aria-label="Previous month">‹</button>
+        <button type="button" data-cal="1" aria-label="Next month"${current ? " disabled" : ""}>›</button></div></div>
+      <div class="cal-grid">${cells}</div>
+      <p class="cal-foot">${trained} ${trained === 1 ? "day" : "days"} trained ${current ? "this month" : `in ${FULL_MON[mo]}`}</p>`;
+  }
+  $("#cal").addEventListener("click", (e) => {
+    const nav = e.target.closest("[data-cal]");
+    if (nav) { const m = state.calMonth || thisMonth(); state.calMonth = new Date(m.getFullYear(), m.getMonth() + Number(nav.dataset.cal), 1); renderCal(); return; }
+    const day = e.target.closest("[data-day]"); if (!day) return;
+    const key = day.dataset.day;
+    // Make sure that day is loaded in the list before scrolling to it.
+    const sorted = [...state.sets].sort(bySetOrder).reverse();
+    let lastIdx = -1; sorted.forEach((s, i) => { if (s.date === key) lastIdx = i; });
+    if (lastIdx >= state.histLimit) { state.histLimit = lastIdx + 21; renderHistory(prIds()); }
+    const el = document.getElementById("day-" + key);
+    if (el) el.scrollIntoView({ block: "start" });
+  });
+
   function renderHistory(prs) {
+    renderCal();
     const sorted = [...state.sets].sort(bySetOrder).reverse();
     $("#hist-count").textContent = sorted.length ? `${setCount(sorted)} ${setCount(sorted) === 1 ? "set" : "sets"}` : "";
     const list = sorted.slice(0, state.histLimit);
@@ -951,7 +1109,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     if (!list.length) { $("#history").innerHTML = `<p class="empty"><strong>No sets yet.</strong>Everything you log shows up here, newest day first, with Edit and Delete.</p>`; return; }
     const days = new Map();
     for (const s of list) { if (!days.has(s.date)) days.set(s.date, []); days.get(s.date).push(s); }
-    $("#history").innerHTML = [...days].map(([d, items]) => `<div>
+    $("#history").innerHTML = [...days].map(([d, items]) => `<div id="day-${d}" style="scroll-margin-top: 12px">
       <div class="day-head"><h3>${dayLabel(d)}</h3><span>${setCount(items)} ${setCount(items) === 1 ? "set" : "sets"}</span></div>
       ${liftGroups(items, prs)}</div>`).join("");
   }
@@ -963,10 +1121,10 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
 
   function render() {
     const r = activeRoutine();
-    const pool = r ? r.lifts : exerciseList();
-    if (!state.selected || !pool.includes(state.selected)) {
+    const pool = r ? r.lifts : liftPool();
+    if (!state.editingId && (!state.selected || !pool.includes(state.selected))) {
       if (r) state.selected = r.lifts.find((ex) => !doneToday(ex)) || r.lifts[0];
-      else { const latest = [...state.sets].sort(bySetOrder).at(-1); state.selected = latest ? latest.exercise : pool[0]; }
+      else { const latest = [...state.sets].sort(bySetOrder).at(-1); state.selected = latest && pool.includes(latest.exercise) ? latest.exercise : pool[0]; }
       if (!state.editingId) fillFromLast(state.selected);
     }
     const st = stats();
@@ -984,7 +1142,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       $("#tab-" + t).hidden = t !== name;
       $("#tb-" + t).setAttribute("aria-selected", t === name);
     }
-    if (name === "progress") renderChart(weeksFor(chartEx()));
+    if (name === "progress") { renderChart(weeksFor(chartEx())); renderBody(); }
     scrollTo({ top: 0 });
   }
   document.querySelector(".tabbar").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
@@ -996,7 +1154,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     return "Couldn't save on this device. Check that the browser isn't in private mode.";
   }
   function readForm() {
-    return { exercise: state.selected, date: formDate(), weightKg: parseFloat($("#weight").value), reps: parseInt($("#reps").value, 10), sets: 1 };
+    const raw = parseFloat($("#weight").value);
+    // A bodyweight lift with the weight left empty means no added weight.
+    return { exercise: state.selected, date: formDate(), weightKg: isBW(state.selected) && !Number.isFinite(raw) ? 0 : raw, reps: parseInt($("#reps").value, 10), sets: 1 };
   }
   function celebrate(beforeSeen) {
     const earned = earnedIds(stats());
@@ -1016,11 +1176,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     render();
     if (isPR) {
       buzz([40, 60, 40]); flash(); animateGain(gainBefore);
-      const why = f.weightKg > prevTop.weightKg ? `heaviest ever, +${kgTrim(f.weightKg - prevTop.weightKg)} kg` : `most reps at ${kgTrim(f.weightKg)} kg`;
-      toast(`<b>PR</b> · ${esc(f.exercise)} ${kgTrim(f.weightKg)} kg × ${f.reps}, ${why}`, { kind: "pr", ms: 4500 });
+      const why = f.weightKg > prevTop.weightKg ? `heaviest ever, +${kgTrim(f.weightKg - prevTop.weightKg)} kg` : `most reps at ${wtKg(f.exercise, f.weightKg)}`;
+      toast(`<b>PR</b> · ${esc(f.exercise)} ${wtKg(f.exercise, f.weightKg)} × ${f.reps}, ${why}`, { kind: "pr", ms: 4500 });
     } else {
       buzz(20);
-      toast(`Set ${setCount(setsOn(f.exercise, f.date))} logged: <b>${kgTrim(f.weightKg)} × ${f.reps}</b>`, { ms: 1800 });
+      toast(`Set ${setCount(setsOn(f.exercise, f.date))} logged: <b>${wt(f.exercise, f.weightKg)} × ${f.reps}</b>`, { ms: 1800 });
     }
     for (const b of newBadges) toast(`<b>✓ Milestone</b> · ${b.name}`, { ms: 5000 });
   }
@@ -1028,7 +1188,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   $("#log-form").addEventListener("submit", (ev) => {
     ev.preventDefault();
     const f = readForm();
-    if (!(f.weightKg > 0)) return say("Enter the weight in kg.", true);
+    if (!(f.weightKg > 0) && !(isBW(f.exercise) && f.weightKg === 0)) return say("Enter the weight in kg.", true);
     if (!(f.reps >= 1)) return say("Enter at least 1 rep.", true);
     say("");
     try {
@@ -1039,7 +1199,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
         try { save(); } catch (e) { state.sets = before; throw e; }
         prefs.seenBadges = earnedIds(stats()); savePrefs();
         stopEditing();
-        toast(`Updated ${esc(f.exercise)}: <b>${kgTrim(f.weightKg)} × ${f.reps}</b>`);
+        toast(`Updated ${esc(f.exercise)}: <b>${wt(f.exercise, f.weightKg)} × ${f.reps}</b>`);
       } else logSet(f);
     } catch (e) { say(errText(e), true); }
   });
@@ -1081,27 +1241,120 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   });
 
   // Adds a lift to the list; an existing name (any case) is returned instead of duplicated.
-  function addExerciseName(raw) {
+  function addExerciseName(raw, bodyweight) {
     const name = raw.trim().replace(/\s+/g, " ");
     if (!name) return { err: "Type a name first." };
     const existing = exerciseList().find((n) => n.toLowerCase() === name.toLowerCase());
     if (existing) return { name: existing, existed: true };
     const before = state.customEx;
-    state.customEx = [...state.customEx, { name, order: Date.now() }];
+    state.customEx = [...state.customEx, { name, order: Date.now(), ...(bodyweight ? { bodyweight: true } : {}) }];
     try { save(); } catch (e) { state.customEx = before; return { err: errText(e) }; }
     return { name };
   }
   function addExercise() {
-    const res = addExerciseName($("#new-ex-name").value);
+    const res = addExerciseName($("#new-ex-name").value, $("#new-ex-bw").checked);
     if (res.err) return say(res.err, true);
     state.selected = res.name; state.chartEx = null;
-    $("#new-ex-name").value = ""; $("#add-ex-row").hidden = true;
+    $("#new-ex-name").value = ""; $("#new-ex-bw").checked = false; $("#add-ex-row").hidden = true;
     say(res.existed ? `${res.name} is already in the list.` : `Added ${res.name}.`);
     fillFromLast(res.name);
     render();
   }
   $("#add-ex-btn").addEventListener("click", addExercise);
   $("#new-ex-name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addExercise(); } });
+
+  // ---------- Manage lifts: rename, bodyweight flag, hide, delete ----------
+  const lsheet = $("#lifts-sheet");
+  const lsay = (msg) => { $("#lifts-status").textContent = msg; };
+  const takeSnapshot = () => ({ sets: state.sets, customEx: state.customEx, routines: state.routines, hidden: state.hidden, selected: state.selected, chartEx: state.chartEx });
+  function restoreSnapshot(b) {
+    Object.assign(state, b);
+    try { save(); } catch (_) {}
+    render(); if (lsheet.open) renderManage();
+  }
+  // Applies a change to the lift data; rolls back if it can't be saved.
+  function commitLifts(fn) {
+    const before = takeSnapshot();
+    fn();
+    try { save(); } catch (e) { Object.assign(state, before); lsay(errText(e)); return null; }
+    render(); renderManage();
+    return before;
+  }
+  function renderManage() {
+    const counts = new Map();
+    for (const s of state.sets) counts.set(s.exercise, (counts.get(s.exercise) || 0) + 1);
+    const row = (n, hidden) => {
+      const has = counts.get(n) || 0, custom = state.customEx.some((e) => e.name === n);
+      const act = hidden ? `<button type="button" class="link" data-show>Show</button>`
+        : !has && custom ? `<button type="button" class="link danger" data-delete>Delete</button>`
+        : `<button type="button" class="link" data-hide>Hide</button>`;
+      return `<div class="lm-row${hidden ? " hidden-lift" : ""}" data-ex="${esc(n)}">
+        <input class="lm-name" type="text" maxlength="40" value="${esc(n)}" aria-label="Name of ${esc(n)}${has ? `, ${has} sets logged` : ""}">
+        <label class="bw-toggle"><input type="checkbox" data-bw ${isBW(n) ? "checked" : ""} aria-label="${esc(n)} is a bodyweight lift">BW</label>
+        ${act}</div>`;
+    };
+    const vis = visibleLifts(), hid = exerciseList().filter((n) => state.hidden.includes(n));
+    $("#lift-manage").innerHTML = vis.map((n) => row(n, false)).join("")
+      + (hid.length ? `<div class="lm-group lbl">Hidden</div>` + hid.map((n) => row(n, true)).join("") : "");
+  }
+  function renameLift(old, raw) {
+    const name = raw.trim().replace(/\s+/g, " ");
+    if (!name) return "A lift needs a name.";
+    if (name === old) return null;
+    if (exerciseList().some((n) => n !== old && n.toLowerCase() === name.toLowerCase())) return `You already have a lift called ${name}.`;
+    const before = commitLifts(() => {
+      const bw = isBW(old), wasHidden = state.hidden.includes(old);
+      state.sets = state.sets.map((s) => (s.exercise === old ? { ...s, exercise: name } : s));
+      state.routines = state.routines.map((r) => ({ ...r, lifts: r.lifts.map((x) => (x === old ? name : x)) }));
+      state.customEx = state.customEx.some((e) => e.name === old)
+        ? state.customEx.map((e) => (e.name === old ? { ...e, name } : e))
+        : [...state.customEx, { name, order: Date.now(), ...(bw ? { bodyweight: true } : {}) }];
+      // Built-in lifts can't be removed from the list, so the old name is hidden instead.
+      state.hidden = state.hidden.filter((x) => x !== old);
+      if (DEFAULT_EX.includes(old)) state.hidden.push(old);
+      if (wasHidden) state.hidden.push(name);
+      if (state.selected === old) state.selected = name;
+      if (state.chartEx === old) state.chartEx = name;
+    });
+    if (before) toast(`Renamed ${esc(old)} to ${esc(name)}.`, { ms: 5000, action: { label: "Undo", fn: () => restoreSnapshot(before) } });
+    return null;
+  }
+  $("#edit-lifts").addEventListener("click", () => { lsay(""); renderManage(); lsheet.showModal ? lsheet.showModal() : lsheet.setAttribute("open", ""); });
+  $("#lifts-done").addEventListener("click", () => lsheet.close());
+  lsheet.addEventListener("click", (e) => { if (e.target === lsheet) lsheet.close(); });
+  $("#lift-manage").addEventListener("change", (e) => {
+    const rowEl = e.target.closest(".lm-row"); if (!rowEl) return;
+    const ex = rowEl.dataset.ex;
+    if (e.target.matches(".lm-name")) {
+      const err = renameLift(ex, e.target.value);
+      lsay(err || "");
+      if (err) e.target.value = ex;
+    } else if (e.target.matches("[data-bw]")) {
+      const on = e.target.checked;
+      commitLifts(() => {
+        state.customEx = state.customEx.some((x) => x.name === ex)
+          ? state.customEx.map((x) => (x.name === ex ? { ...x, bodyweight: on } : x))
+          : [...state.customEx, { name: ex, order: Date.now(), bodyweight: on }];
+      });
+    }
+  });
+  $("#lift-manage").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches(".lm-name")) { e.preventDefault(); e.target.blur(); } });
+  $("#lift-manage").addEventListener("click", (e) => {
+    const rowEl = e.target.closest(".lm-row"); if (!rowEl) return;
+    const ex = rowEl.dataset.ex;
+    if (e.target.closest("[data-hide]")) {
+      const before = commitLifts(() => { state.hidden = [...state.hidden, ex]; });
+      if (before) toast(`Hid ${esc(ex)}. Its history stays.`, { ms: 5000, action: { label: "Undo", fn: () => restoreSnapshot(before) } });
+    } else if (e.target.closest("[data-show]")) {
+      commitLifts(() => { state.hidden = state.hidden.filter((x) => x !== ex); });
+    } else if (e.target.closest("[data-delete]")) {
+      const before = commitLifts(() => {
+        state.customEx = state.customEx.filter((x) => x.name !== ex);
+        state.routines = state.routines.map((r) => ({ ...r, lifts: r.lifts.filter((x) => x !== ex) })).filter((r) => r.lifts.length);
+      });
+      if (before) toast(`Deleted ${esc(ex)}.`, { ms: 5000, action: { label: "Undo", fn: () => restoreSnapshot(before) } });
+    }
+  });
 
   // ---------- Routines ----------
   $("#routines").addEventListener("click", (e) => {
@@ -1128,7 +1381,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   }
   function renderPicks() {
     const d = state.draft;
-    const names = [...exerciseList(), ...d.lifts.filter((n) => !exerciseList().includes(n))];
+    const names = [...visibleLifts(), ...d.lifts.filter((n) => !visibleLifts().includes(n))];
     $("#routine-picks").innerHTML = names.map((n) => {
       const i = d.lifts.indexOf(n);
       return `<button type="button" class="pick" data-ex="${esc(n)}" aria-pressed="${i >= 0}"><span class="ord">${i >= 0 ? i + 1 : ""}</span>${esc(n)}</button>`;
@@ -1141,10 +1394,10 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     rsay(""); renderPicks();
   });
   function addRoutineLift() {
-    const res = addExerciseName($("#routine-new").value);
+    const res = addExerciseName($("#routine-new").value, $("#routine-new-bw").checked);
     if (res.err) return rsay(res.err);
     if (!state.draft.lifts.includes(res.name)) state.draft.lifts.push(res.name);
-    $("#routine-new").value = ""; rsay(""); renderPicks(); render();
+    $("#routine-new").value = ""; $("#routine-new-bw").checked = false; rsay(""); renderPicks(); render();
   }
   $("#routine-new-btn").addEventListener("click", addRoutineLift);
   $("#routine-new").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addRoutineLift(); } });
@@ -1190,7 +1443,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     if (r && !r.lifts.includes(s.exercise)) { prefs.routineId = null; savePrefs(); }
     state.editingId = id; state.selected = s.exercise; state.chartEx = null;
     $("#date").value = s.date; $("#weight").value = s.weightKg; $("#reps").value = s.reps;
-    $("#edit-text").textContent = `Editing ${s.exercise}, ${kgTrim(s.weightKg)} × ${s.reps}`;
+    $("#edit-text").textContent = `Editing ${s.exercise}, ${wt(s.exercise, s.weightKg)} × ${s.reps}`;
     $("#edit-bar").hidden = false;
     setTab("log"); render();
   }
@@ -1211,7 +1464,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     state.sets = state.sets.filter((x) => x.id !== id);
     try { save(); } catch (err) { state.sets = before; return toast(errText(err)); }
     if (state.editingId === id) stopEditing(); else render();
-    toast(`Deleted ${esc(gone.exercise)} ${kgTrim(gone.weightKg)} × ${gone.reps}`, {
+    toast(`Deleted ${esc(gone.exercise)} ${wt(gone.exercise, gone.weightKg)} × ${gone.reps}`, {
       ms: 5000,
       action: { label: "Undo", fn: () => { state.sets = [...state.sets, gone]; try { save(); } catch (_) {} render(); toast("Set restored."); } },
     });
@@ -1235,7 +1488,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   // ---------- Backup ----------
   const bsay = (msg, isErr) => { const s = $("#backup-status"); s.textContent = msg; s.classList.toggle("err", !!isErr); };
   $("#export-btn").addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ app: "lift-tracker", version: 1, exportedAt: new Date().toISOString(), sets: state.sets, exercises: state.customEx, routines: state.routines }, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ app: "lift-tracker", exportedAt: new Date().toISOString(), ...snapshot() }, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `lift-tracker-backup-${todayKey()}.json`;
@@ -1259,6 +1512,12 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       state.sets = [...state.sets, ...incoming];
       state.customEx = [...state.customEx, ...exs];
       state.routines = [...state.routines, ...rts];
+      // Keep bodyweight flags from the backup for lifts you already have.
+      const bwNames = new Set((data.exercises || []).filter((x) => x && x.bodyweight).map((x) => x.name));
+      state.customEx = state.customEx.map((x) => (bwNames.has(x.name) ? { ...x, bodyweight: true } : x));
+      state.hidden = cleanHidden([...state.hidden, ...cleanHidden(data.hidden)]);
+      const days = new Set(state.body.map((b) => b.date));
+      state.body = [...state.body, ...cleanBody(data.bodyweight).filter((b) => !days.has(b.date))];
       save();
       prefs.seenBadges = earnedIds(stats()); savePrefs();
       render();
