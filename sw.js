@@ -1,5 +1,5 @@
 // Offline cache for Lift Tracker. Bump VERSION when any app file changes.
-const VERSION = "lift-tracker-v2";
+const VERSION = "lift-tracker-v3";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 const FONTS = "lift-tracker-fonts";
 

@@ -1,13 +1,13 @@
 {
   "name": "Lift Tracker",
   "short_name": "Lifts",
-  "description": "Log lifts in kg and see week-over-week strength gains. Works offline.",
+  "description": "Log lifts in kg, beat last time, and see week-over-week strength gains. Works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#071426",
-  "theme_color": "#071426",
+  "background_color": "#0E0E0E",
+  "theme_color": "#0E0E0E",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

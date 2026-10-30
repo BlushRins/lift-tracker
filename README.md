@@ -1,13 +1,15 @@
 # Lift Tracker
 
-An offline lifting log. Log weight (kg), reps and sets; it scores each set by estimated one-rep max (Epley: kg × (1 + reps ÷ 30)) and shows how much stronger you got week over week.
+An offline lifting log. Log each set's weight (kg) and reps; it scores each set by estimated one-rep max (Epley: kg × (1 + reps ÷ 30)) and shows how much stronger you got week over week.
 
 - Installable web app (PWA). Works with no connection after the first visit.
-- Log tab: exercise chips, −/+ steppers, last weight auto-filled, Repeat last set, plate calculator (20/15 kg bar).
-- Progress tab: animated strength-gained counter, weekly streak, lift cards with trend lines, chart with PR rings, weight moved as familiar objects, badges.
-- History tab: sets as cards grouped by day, Edit, Delete with Undo, backup export/import.
-- PR celebrations (confetti, vibration on Android) when a set beats your best ever.
+- Log tab: one set per tap ("Log set 3"), big kg/reps readout with steppers, **Beat last time** (last session's sets plus two targets: +1 rep or +2.5 kg, and a live Ahead/Below verdict), plate calculator in bumper-plate colours (20/15 kg bar).
+- Routines: save a day like "Leg day" (Leg press → Squat → RDL); lifts show in order, tick off as you log, with a Next button.
+- Progress tab: strength gained, 8-week streak strip, lift rows with trend lines, chart with PR weeks, volume (kg × reps, every set) with a per-lift breakdown, milestones.
+- History tab: days grouped by lift, Edit, Delete with Undo, backup export/import (includes routines).
 - Data is stored on the device only (localStorage). Use **Export backup** to keep a copy.
+
+Design rules ("gym floor"): flat, near-black, rules instead of nested cards, Barlow Condensed numbers. Yellow `#FFC400` is only ever a fill with black text on it, never a text colour.
 
 Live: https://blushrins.github.io/lift-tracker/
 
