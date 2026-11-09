@@ -99,6 +99,29 @@ input { font: 500 1rem var(--body); color: var(--ink); background: var(--raised)
 .chip { flex: none; padding: 9px 13px; background: transparent; font-size: .92rem; white-space: nowrap; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .chip.add { border-style: dashed; color: var(--muted); }
+.chip.find { display: inline-flex; align-items: center; gap: 6px; border-color: var(--ink); }
+.lift-btn { display: inline-flex; align-items: center; gap: 10px; background: none; border: none; border-radius: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-align: left; min-width: 0; }
+.lift-btn:active { background: none; opacity: .7; }
+.lift-btn svg { flex: none; color: var(--muted); }
+
+/* Lift picker: full-height sheet with search, muscle groups, your lifts, then the library */
+dialog.pick-dialog { width: 100%; max-width: 560px; height: 100dvh; max-height: 100dvh; margin: 0 auto; }
+.pick-dialog .sheet { height: 100%; max-height: none; border-radius: 0; border-width: 0 1px; gap: 12px; overflow: hidden;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) var(--gut) 0; }
+.pk-top { display: flex; gap: 8px; align-items: center; }
+.pk-top input { flex: 1; font-size: 1.05rem; padding: 12px 14px; border-color: var(--ink); }
+#pick-results { flex: 1; overflow-y: auto; overscroll-behavior: contain; margin-inline: calc(-1 * var(--gut)); padding: 0 var(--gut) calc(env(safe-area-inset-bottom, 0px) + 24px); }
+.pk-sec { display: block; padding: 14px 0 6px; }
+.pk-row { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; text-align: left; background: transparent; border: none; border-top: 1px solid var(--rule); border-radius: 0; padding: 12px 2px; }
+.pk-row:active { background: var(--raised); }
+.pk-name { font-weight: 600; font-size: 1.02rem; }
+.pk-sub { grid-column: 1; color: var(--muted); font-size: .85rem; font-weight: 400; }
+.pk-tag { grid-row: 1 / span 2; grid-column: 2; color: var(--muted); font: 600 .82rem var(--display); text-transform: uppercase; letter-spacing: .06em; }
+.pk-plus { grid-row: 1 / span 2; grid-column: 2; width: 30px; height: 30px; border: 1.5px solid var(--rule-strong); display: grid; place-items: center; font: 700 1.2rem/1 var(--display); }
+.pk-row.cur .pk-tag { background: var(--yellow); color: var(--on-yellow); padding: 3px 6px; }
+.pk-new { border-top: 1px solid var(--rule); padding: 14px 2px; display: flex; flex-direction: column; gap: 10px; }
+.pk-new .primary { font-size: 1.1rem; padding: 12px; }
+.pk-empty { color: var(--muted); padding: 14px 2px 4px; }
 .chip.done:not([aria-pressed="true"]) { color: var(--muted); }
 
 /* Log: lift name and the big readout */
@@ -308,11 +331,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       <div class="field">
         <div class="lbl-row"><span class="lbl" id="ex-label">Lift</span><button type="button" class="link small" id="edit-lifts">Edit lifts</button></div>
         <div class="chips" id="chips" role="group" aria-labelledby="ex-label"></div>
-        <div class="add-ex" id="add-ex-row" hidden>
-          <input id="new-ex-name" type="text" placeholder="e.g. Leg Press" maxlength="40" aria-label="New lift name">
-          <button type="button" id="add-ex-btn">Add</button>
-          <label class="bw-check"><input type="checkbox" id="new-ex-bw"> Bodyweight lift (pull-ups, dips, push-ups)</label>
-        </div>
       </div>
     </div>
 
@@ -473,6 +491,19 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   </div>
 </dialog>
 
+<dialog id="pick-sheet" class="pick-dialog" aria-label="Choose a lift">
+  <div class="sheet">
+    <div class="pk-top">
+      <input id="pick-q" type="search" placeholder="Search lifts, e.g. squat, rdl, pull" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="Search lifts">
+      <button type="button" class="link" id="pick-close">Cancel</button>
+    </div>
+    <div class="chips" id="pick-groups" role="group" aria-label="Muscle group"></div>
+    <div id="pick-results" aria-live="polite"></div>
+  </div>
+</dialog>
+
+<datalist id="lib-names"></datalist>
+
 <dialog id="routine-sheet" aria-labelledby="routine-h">
   <form class="sheet" id="routine-form" novalidate>
     <h2 id="routine-h">New routine</h2>
@@ -482,9 +513,10 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     </div>
     <div class="field">
       <span class="lbl">Tap lifts in the order you do them</span>
+      <input id="routine-filter" type="search" placeholder="Search your lifts" autocomplete="off" aria-label="Search your lifts">
       <div class="pick-list" id="routine-picks"></div>
       <div class="add-ex">
-        <input id="routine-new" type="text" maxlength="40" placeholder="Another lift, e.g. RDL" aria-label="New lift name">
+        <input id="routine-new" type="text" maxlength="40" placeholder="Another lift, e.g. RDL" aria-label="New lift name" list="lib-names">
         <button type="button" id="routine-new-btn">Add</button>
         <label class="bw-check"><input type="checkbox" id="routine-new-bw"> Bodyweight lift</label>
       </div>
@@ -501,6 +533,51 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
 <script>
 (() => {
   const DEFAULT_EX = ["Bench Press", "Squat", "Deadlift", "Overhead Press"];
+  // Built-in exercise library for the lift picker: [group, name, bodyweight?, "search aliases"].
+  const SEARCH_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>';
+  const GROUPS = ["Legs", "Back", "Chest", "Shoulders", "Arms", "Core"];
+  const LIBRARY = [
+    ["Legs", "Squat", 0, "back squat, barbell squat"], ["Legs", "Front Squat", 0, ""], ["Legs", "Goblet Squat", 0, "db squat"],
+    ["Legs", "Hack Squat", 0, "machine squat"], ["Legs", "Leg Press", 0, "sled"], ["Legs", "Romanian Deadlift", 0, "rdl, stiff leg deadlift"],
+    ["Legs", "Bulgarian Split Squat", 0, "bss, split squat"], ["Legs", "Lunge", 0, "walking lunge, lunges"], ["Legs", "Step-up", 0, ""],
+    ["Legs", "Leg Extension", 0, "quad extension"], ["Legs", "Leg Curl", 0, "hamstring curl"], ["Legs", "Hip Thrust", 0, "glute bridge"],
+    ["Legs", "Calf Raise", 0, "calves"], ["Legs", "Hip Abduction", 0, "abductor"],
+    ["Back", "Deadlift", 0, "conventional deadlift, dl"], ["Back", "Pull-up", 1, ""], ["Back", "Chin-up", 1, ""],
+    ["Back", "Lat Pulldown", 0, "pulldown, lats"], ["Back", "Barbell Row", 0, "bent over row, bb row"], ["Back", "Dumbbell Row", 0, "db row, one arm row"],
+    ["Back", "Seated Cable Row", 0, "cable row"], ["Back", "T-Bar Row", 0, ""], ["Back", "Face Pull", 0, ""],
+    ["Back", "Back Extension", 1, "hyperextension"], ["Back", "Shrug", 0, "traps"],
+    ["Chest", "Bench Press", 0, "flat bench, bb bench, bench"], ["Chest", "Incline Bench Press", 0, "incline bench"], ["Chest", "Dumbbell Bench Press", 0, "db bench, db press"],
+    ["Chest", "Incline Dumbbell Press", 0, "incline db press"], ["Chest", "Chest Press Machine", 0, "machine chest press"], ["Chest", "Chest Fly", 0, "pec fly, cable fly, pec deck"],
+    ["Chest", "Push-up", 1, "press up"], ["Chest", "Dip", 1, "dips"],
+    ["Shoulders", "Overhead Press", 0, "ohp, military press, shoulder press"], ["Shoulders", "Dumbbell Shoulder Press", 0, "db shoulder press"],
+    ["Shoulders", "Arnold Press", 0, ""], ["Shoulders", "Lateral Raise", 0, "side raise, lateral raises"], ["Shoulders", "Front Raise", 0, ""],
+    ["Shoulders", "Rear Delt Fly", 0, "reverse fly"], ["Shoulders", "Upright Row", 0, ""],
+    ["Arms", "Barbell Curl", 0, "bicep curl, biceps curl, bb curl"], ["Arms", "Dumbbell Curl", 0, "db curl, bicep curl"], ["Arms", "Hammer Curl", 0, "biceps"],
+    ["Arms", "Preacher Curl", 0, "ez bar curl, biceps"], ["Arms", "Cable Curl", 0, "biceps"], ["Arms", "Tricep Pushdown", 0, "triceps pushdown, rope pushdown"],
+    ["Arms", "Skull Crusher", 0, "lying tricep extension, triceps"], ["Arms", "Overhead Tricep Extension", 0, "french press, triceps"],
+    ["Arms", "Close-Grip Bench Press", 0, "cgbp, triceps"], ["Arms", "Wrist Curl", 0, "forearms"],
+    ["Core", "Hanging Leg Raise", 1, "abs, leg raise"], ["Core", "Cable Crunch", 0, "abs"], ["Core", "Crunch", 1, "abs, crunches"],
+    ["Core", "Ab Wheel", 1, "rollout, abs"], ["Core", "Russian Twist", 1, "abs, obliques"], ["Core", "Decline Sit-up", 1, "situp, sit up, abs"],
+  ].map(([g, n, bw, a]) => ({ g, n, bw: !!bw, a: a ? a.split(", ") : [] }));
+  // Lowercase words only: "Pull-up" -> "pull up", so "pullup", "pull up" and "pull-up" all match.
+  const norm = (x) => String(x).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const squash = (x) => norm(x).replace(/ /g, "");
+  // The library entry a lift name refers to, by name or by a short alias ("RDL" -> Romanian Deadlift).
+  const libFind = (name) => LIBRARY.find((e) => [e.n, ...e.a].some((t) => squash(t) === squash(name))) || null;
+  // 0 = name starts with the query, 1 = every word matches a word start, 2 = found anywhere, Infinity = no match.
+  function matchScore(q, texts) {
+    const qn = norm(q), qs = qn.replace(/ /g, "");
+    if (!qs) return 0;
+    let best = Infinity;
+    for (const t of texts) {
+      const tn = norm(t), ts = tn.replace(/ /g, ""), ws = tn.split(" ");
+      if (ts.startsWith(qs)) return 0;
+      if (qn.split(" ").every((k) => ws.some((w) => w.startsWith(k)))) best = Math.min(best, 1);
+      else if (ts.includes(qs)) best = Math.min(best, 2);
+    }
+    return best;
+  }
+  const liftTexts = (name) => { const e = libFind(name); return e ? [name, e.n, ...e.a] : [name]; };
   const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
   const PLATE_VAR = { 25: "--p25", 20: "--p20", 15: "--p15", 10: "--p10", 5: "--p5", 2.5: "--psm", 1.25: "--psm" };
   const DAY = 86400000;
@@ -767,14 +844,29 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       + `<button type="button" class="chip add" id="new-routine-btn">+ Routine</button>`;
     $("#edit-routine").hidden = !r;
   }
+  // Visible lifts you've logged, most recently used first.
+  function recentLifts() {
+    const last = new Map();
+    for (const s of state.sets) {
+      const k = `${s.date}|${String(s.createdAt || 0).padStart(15, "0")}`;
+      if (!last.has(s.exercise) || k > last.get(s.exercise)) last.set(s.exercise, k);
+    }
+    return liftPool().filter((n) => last.has(n)).sort((a, b) => (last.get(b) > last.get(a) ? 1 : -1));
+  }
   function renderChips() {
     const r = activeRoutine();
-    const names = r ? r.lifts : liftPool();
-    $("#chips").innerHTML = names.map((n) => {
+    let names;
+    if (r) names = r.lifts;
+    else {
+      // The 8 most relevant lifts; everything else is one tap away in Search.
+      const recent = recentLifts();
+      names = [...recent, ...liftPool().filter((n) => !recent.includes(n))].slice(0, 8);
+      if (state.selected && !names.includes(state.selected)) names = [state.selected, ...names.slice(0, 7)];
+    }
+    $("#chips").innerHTML = `<button type="button" class="chip find" id="find-btn">${SEARCH_SVG}Search</button>` + names.map((n) => {
       const done = r && doneToday(n);
       return `<button type="button" class="chip${done ? " done" : ""}" data-ex="${esc(n)}" aria-pressed="${n === state.selected}">${done ? `<span aria-hidden="true">✓ </span>` : ""}${esc(n)}${done ? `<span class="sr">, done today</span>` : ""}</button>`;
-    }).join("") + (r ? "" : `<button type="button" class="chip add" id="new-ex-btn">+ New</button>`);
-    if (r) $("#add-ex-row").hidden = true;
+    }).join("");
     requestAnimationFrame(revealChip);
   }
   // Keep the selected lift visible in the sideways-scrolling row.
@@ -798,7 +890,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   function renderLog() {
     const r = activeRoutine(), ex = state.selected, d = formDate();
     const pos = r ? r.lifts.indexOf(ex) : -1;
-    $("#lift-name").innerHTML = `<span>${esc(ex)}</span>${pos >= 0 ? `<span class="of">${pos + 1} of ${r.lifts.length}</span>` : ""}`;
+    $("#lift-name").innerHTML = `<button type="button" class="lift-btn" id="lift-btn" aria-label="Change lift, now ${esc(ex)}"><span>${esc(ex)}</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${pos >= 0 ? `<span class="of">${pos + 1} of ${r.lifts.length}</span>` : ""}`;
     const done = setsOn(ex, d);
     $("#submit-btn").textContent = state.editingId ? "Save changes" : `Log set ${setCount(done) + 1}`;
     const line = $("#session-line");
@@ -1223,7 +1315,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   });
 
   $("#chips").addEventListener("click", (e) => {
-    if (e.target.closest("#new-ex-btn")) { const r = $("#add-ex-row"); r.hidden = !r.hidden; if (!r.hidden) $("#new-ex-name").focus(); return; }
+    if (e.target.closest("#find-btn")) return openPicker();
     const c = e.target.closest("[data-ex]"); if (!c) return;
     state.selected = c.dataset.ex; state.chartEx = null;
     if (!state.editingId) fillFromLast(state.selected);
@@ -1247,21 +1339,90 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const existing = exerciseList().find((n) => n.toLowerCase() === name.toLowerCase());
     if (existing) return { name: existing, existed: true };
     const before = state.customEx;
-    state.customEx = [...state.customEx, { name, order: Date.now(), ...(bodyweight ? { bodyweight: true } : {}) }];
+    const bw = bodyweight || !!(libFind(name) && libFind(name).bw);
+    state.customEx = [...state.customEx, { name, order: Date.now(), ...(bw ? { bodyweight: true } : {}) }];
     try { save(); } catch (e) { state.customEx = before; return { err: errText(e) }; }
     return { name };
   }
-  function addExercise() {
-    const res = addExerciseName($("#new-ex-name").value, $("#new-ex-bw").checked);
-    if (res.err) return say(res.err, true);
-    state.selected = res.name; state.chartEx = null;
-    $("#new-ex-name").value = ""; $("#new-ex-bw").checked = false; $("#add-ex-row").hidden = true;
-    say(res.existed ? `${res.name} is already in the list.` : `Added ${res.name}.`);
-    fillFromLast(res.name);
-    render();
+  // ---------- Lift picker ----------
+  const psheet = $("#pick-sheet");
+  const pick = { q: "", group: "All" };
+  function openPicker() {
+    pick.q = ""; pick.group = "All";
+    $("#pick-q").value = "";
+    renderPicker();
+    psheet.showModal ? psheet.showModal() : psheet.setAttribute("open", "");
+    $("#pick-results").scrollTop = 0;
+    $("#pick-q").focus();
   }
-  $("#add-ex-btn").addEventListener("click", addExercise);
-  $("#new-ex-name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addExercise(); } });
+  function renderPicker() {
+    const mine = [...recentLifts(), ...liftPool().filter((n) => !recentLifts().includes(n))];
+    const groupOf = (n) => (libFind(n) ? libFind(n).g : "Other");
+    const groups = ["All", ...GROUPS, ...(mine.some((n) => groupOf(n) === "Other") ? ["Other"] : [])];
+    if (!groups.includes(pick.group)) pick.group = "All";
+    $("#pick-groups").innerHTML = groups.map((g) => `<button type="button" class="chip" data-group="${g}" aria-pressed="${g === pick.group}">${g}</button>`).join("");
+    const inGroup = (g) => pick.group === "All" || g === pick.group;
+    const rank = (list, texts) => list.map((x, i) => ({ x, i, sc: matchScore(pick.q, texts(x)) }))
+      .filter((o) => o.sc < Infinity).sort((a, b) => a.sc - b.sc || a.i - b.i).map((o) => o.x);
+    const yours = rank(mine.filter((n) => inGroup(groupOf(n))), liftTexts);
+    // Library entries you don't already have (an "RDL" you added hides "Romanian Deadlift").
+    const have = new Set(mine.map(libFind).filter(Boolean));
+    const lib = rank(LIBRARY.filter((e) => inGroup(e.g) && !have.has(e)), (e) => [e.n, ...e.a]);
+    const row = (n) => {
+      const last = lastSetOf(n);
+      const sub = last ? `${wtKg(n, last.weightKg)} × ${last.reps} · ${dayLabel(last.date)}` : "Not logged yet";
+      const cur = n === state.selected;
+      return `<button type="button" class="pk-row${cur ? " cur" : ""}" data-pick="${esc(n)}"><span class="pk-name">${esc(n)}</span><span class="pk-sub">${sub}</span><span class="pk-tag">${cur ? "Now" : isBW(n) ? "BW" : groupOf(n) === "Other" ? "" : groupOf(n)}</span></button>`;
+    };
+    const libRow = (e) => `<button type="button" class="pk-row" data-lib="${esc(e.n)}"><span class="pk-name">${esc(e.n)}</span><span class="pk-sub">${e.g}${e.bw ? " · bodyweight" : ""} · tap to add</span><span class="pk-plus" aria-hidden="true">+</span></button>`;
+    const q = pick.q.trim().replace(/\s+/g, " ");
+    const exact = q && [...mine, ...LIBRARY.map((e) => e.n)].some((n) => squash(n) === squash(q));
+    let html = "";
+    if (yours.length) html += `<span class="pk-sec lbl">${q ? "Your lifts" : "Your lifts, most recent first"}</span>` + yours.map(row).join("");
+    if (lib.length) html += `<span class="pk-sec lbl">${q ? "From the library" : "Exercise library"}</span>` + lib.map(libRow).join("");
+    if (!yours.length && !lib.length) html += `<p class="pk-empty">${q ? `No lift matches “${esc(q)}”.` : `No ${pick.group.toLowerCase()} lifts yet.`}</p>`;
+    if (q && !exact) html += `<div class="pk-new"><button type="button" class="primary" id="pick-add">Add “${esc(q)}”</button>
+      <label class="bw-check"><input type="checkbox" id="pick-bw"> Bodyweight lift (pull-ups, dips, push-ups)</label></div>`;
+    $("#pick-results").innerHTML = html;
+  }
+  // Selects a lift from the picker, adding it to your list first if it came from the library or search.
+  function chooseLift(name, bodyweight) {
+    let n = name;
+    if (!exerciseList().some((x) => x === name)) {
+      const res = addExerciseName(name, bodyweight);
+      if (res.err) { $("#pick-results").insertAdjacentHTML("afterbegin", `<p class="status err">${esc(res.err)}</p>`); return; }
+      n = res.name;
+    }
+    if (state.hidden.includes(n)) { state.hidden = state.hidden.filter((x) => x !== n); try { save(); } catch (_) {} }
+    const r = activeRoutine();
+    if (r && !r.lifts.includes(n)) { prefs.routineId = null; savePrefs(); }
+    state.selected = n; state.chartEx = null;
+    if (!state.editingId) fillFromLast(n);
+    psheet.close();
+    render();
+    $("#lift-name").scrollIntoView({ block: "nearest" });
+  }
+  $("#pick-q").addEventListener("input", (e) => { pick.q = e.target.value; renderPicker(); $("#pick-results").scrollTop = 0; });
+  $("#pick-q").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const first = $("#pick-results").querySelector("[data-pick], [data-lib], #pick-add");
+    if (first) first.click();
+  });
+  $("#pick-groups").addEventListener("click", (e) => {
+    const g = e.target.closest("[data-group]"); if (!g) return;
+    pick.group = g.dataset.group; renderPicker(); $("#pick-results").scrollTop = 0;
+  });
+  $("#pick-results").addEventListener("click", (e) => {
+    const mineRow = e.target.closest("[data-pick]"), libRowEl = e.target.closest("[data-lib]");
+    if (mineRow) return chooseLift(mineRow.dataset.pick);
+    if (libRowEl) return chooseLift(libRowEl.dataset.lib);
+    // Phone keyboards type lowercase; "sissy squat" is saved as "Sissy Squat" (RDL stays RDL).
+    if (e.target.closest("#pick-add")) return chooseLift(pick.q.trim().replace(/\s+/g, " ").replace(/\b[a-z]/g, (c) => c.toUpperCase()), $("#pick-bw").checked);
+  });
+  $("#pick-close").addEventListener("click", () => psheet.close());
+  $("#lift-name").addEventListener("click", (e) => { if (e.target.closest("#lift-btn")) openPicker(); });
+  $("#lib-names").innerHTML = LIBRARY.map((e) => `<option value="${esc(e.n)}">`).join("");
 
   // ---------- Manage lifts: rename, bodyweight flag, hide, delete ----------
   const lsheet = $("#lifts-sheet");
@@ -1373,7 +1534,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     state.draft = r ? { id: r.id, lifts: [...r.lifts] } : { id: null, lifts: [] };
     $("#routine-h").textContent = r ? "Edit routine" : "New routine";
     $("#routine-name").value = r ? r.name : "";
-    $("#routine-new").value = "";
+    $("#routine-new").value = ""; $("#routine-filter").value = "";
     $("#routine-delete").hidden = !r;
     rsay("");
     renderPicks();
@@ -1381,8 +1542,10 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   }
   function renderPicks() {
     const d = state.draft;
-    const names = [...visibleLifts(), ...d.lifts.filter((n) => !visibleLifts().includes(n))];
-    $("#routine-picks").innerHTML = names.map((n) => {
+    const all = [...visibleLifts(), ...d.lifts.filter((n) => !visibleLifts().includes(n))];
+    const q = $("#routine-filter").value;
+    const names = all.filter((n) => d.lifts.includes(n) || matchScore(q, liftTexts(n)) < Infinity);
+    $("#routine-picks").innerHTML = (names.length ? "" : `<p class="pk-empty">No lift matches. Add it below.</p>`) + names.map((n) => {
       const i = d.lifts.indexOf(n);
       return `<button type="button" class="pick" data-ex="${esc(n)}" aria-pressed="${i >= 0}"><span class="ord">${i >= 0 ? i + 1 : ""}</span>${esc(n)}</button>`;
     }).join("");
@@ -1400,6 +1563,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     $("#routine-new").value = ""; $("#routine-new-bw").checked = false; rsay(""); renderPicks(); render();
   }
   $("#routine-new-btn").addEventListener("click", addRoutineLift);
+  $("#routine-filter").addEventListener("input", renderPicks);
   $("#routine-new").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addRoutineLift(); } });
   $("#routine-form").addEventListener("submit", (e) => {
     e.preventDefault();

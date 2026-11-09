@@ -6,6 +6,7 @@ An offline lifting log. Log each set's weight (kg) and reps; your best set is th
 - Log tab: one set per tap ("Log set 3"), big kg/reps readout with steppers, **Beat last time** (last session's sets plus two targets: +1 rep or +2.5 kg, and a live Ahead/Below verdict), plate calculator in bumper-plate colours (20/15 kg bar).
 - Routines: save a day like "Leg day" (Leg press → Squat → RDL); lifts show in order, tick off as you log, with a Next button.
 - Progress tab: strength gained (kg added to your best set per lift), 8-week streak strip, personal records (heaviest weight per lift; same weight with more reps also counts), heaviest-each-week chart, milestones. No volume totals and no e1RM, on purpose: everything is plain kg and reps.
+- Lift picker: tap Search (or the lift name) for a full-screen search over your lifts (most recent first, with your last set) and a built-in library of about 55 exercises with muscle-group filters. Aliases work (`rdl`, `ohp`, `db bench`, `pullup`); Enter picks the top result, and anything not found can be added in one tap. The Log screen's chip row shows your 8 most recent lifts.
 - Bodyweight lifts (pull-ups, dips, push-ups): log reps with 0 kg, or any added weight; shown as "BW" / "BW +10".
 - Edit lifts: rename (history and routines follow), mark as bodyweight, hide (history stays), or delete an unused lift.
 - Body weight: a weekly weigh-in on Progress with a simple trend line.
