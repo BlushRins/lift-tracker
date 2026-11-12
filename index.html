@@ -13,23 +13,48 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lifts">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- "default", not "black-translucent": translucent always draws white status text, which vanished on the light theme.
+     With "default" the installed app's status bar follows the theme-color above (dark or light). -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
 /* "Gym floor": flat, hard-edged, near-black. Sections are separated by rules, never boxed inside boxes.
    Yellow is only ever a fill with black text on it (Log button, PR, active tab, streak), never a text colour. */
+
+/* Local fallbacks sized to Barlow, so numerals keep their width and baseline while the web font loads
+   or when it is missing offline. No network: local() only. size-adjust matches the tabular digits
+   (Barlow Condensed 700: 0.498em, Barlow: running text); ascent/descent are Barlow's 1.0 / 0.2 divided by it. */
+@font-face { font-family: "Barlow Condensed Fallback"; font-weight: 600 700; size-adjust: 109.2%; ascent-override: 91.6%; descent-override: 18.3%; line-gap-override: 0%;
+  src: local("Arial Narrow Bold"), local("ArialNarrow-Bold"), local("Liberation Sans Narrow Bold"), local("LiberationSansNarrow-Bold"); }
+@font-face { font-family: "Barlow Condensed Fallback RC"; font-weight: 600 700; size-adjust: 98.5%; ascent-override: 101.5%; descent-override: 20.3%; line-gap-override: 0%;
+  src: local("Roboto Condensed Bold"), local("RobotoCondensed-Bold"); }
+@font-face { font-family: "Barlow Condensed Fallback R"; font-weight: 600 700; size-adjust: 86.8%; ascent-override: 115.2%; descent-override: 23%; line-gap-override: 0%;
+  src: local("Roboto Bold"), local("Roboto-Bold"); }
+@font-face { font-family: "Barlow Condensed Fallback A"; font-weight: 600 700; size-adjust: 89.5%; ascent-override: 111.7%; descent-override: 22.3%; line-gap-override: 0%;
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("LiberationSans-Bold"), local("Arimo Bold"), local("Arimo-Bold"), local("Helvetica Neue Bold"), local("HelveticaNeue-Bold"); }
+@font-face { font-family: "Barlow Fallback"; font-weight: 400 500; size-adjust: 96%; ascent-override: 104.2%; descent-override: 20.8%; line-gap-override: 0%;
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("LiberationSans"), local("Arimo"), local("Arimo-Regular"), local("Helvetica Neue"), local("HelveticaNeue"); }
+@font-face { font-family: "Barlow Fallback"; font-weight: 600 700; size-adjust: 91.2%; ascent-override: 109.6%; descent-override: 21.9%; line-gap-override: 0%;
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("LiberationSans-Bold"), local("Arimo Bold"), local("Arimo-Bold"), local("Helvetica Neue Bold"), local("HelveticaNeue-Bold"); }
+@font-face { font-family: "Barlow Fallback R"; font-weight: 400 500; size-adjust: 96.8%; ascent-override: 103.3%; descent-override: 20.7%; line-gap-override: 0%;
+  src: local("Roboto"), local("Roboto-Regular"); }
+@font-face { font-family: "Barlow Fallback R"; font-weight: 600 700; size-adjust: 97%; ascent-override: 103.1%; descent-override: 20.6%; line-gap-override: 0%;
+  src: local("Roboto Bold"), local("Roboto-Bold"); }
+
 :root {
   --bg: #0E0E0E; --raised: #171717; --rule: #2A2A2A; --rule-strong: #3D3D3A;
   --ink: #F2F2EE; --muted: #8C8C86;
-  --yellow: #FFC400; --on-yellow: #111111;
+  --yellow: #FFC400; --on-yellow: #111111; --yellow-press: #E0AC00;
   --up: #2BD47D; --down: #FF5A4E;
   /* Bumper plate colours: 25 red, 20 blue, 15 yellow, 10 green, 5 white, change plates grey */
   --p25: #D7262E; --p20: #2563D9; --p15: #FFC400; --p10: #1E9E4A; --p5: #F2F2EE; --psm: #6E6E6A;
-  --display: "Barlow Condensed", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
-  --body: "Barlow", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Barlow Condensed", "Barlow Condensed Fallback", "Barlow Condensed Fallback RC", "Barlow Condensed Fallback R", "Barlow Condensed Fallback A", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
+  --body: "Barlow", "Barlow Fallback", "Barlow Fallback R", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --tabbar: 60px; --gut: 16px;
+  /* Motion: short and flat. Used only inside (prefers-reduced-motion: no-preference). */
+  --dur-fast: 120ms; --dur: 200ms; --ease: cubic-bezier(.2, .7, .2, 1);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -77,30 +102,42 @@ p { margin: 0; }
 .sec.first { border-top: none; padding-top: 4px; }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .sec-head > span { color: var(--muted); font-size: .88rem; }
+/* An empty container (chart, list or note not filled yet) gives back its gap, so every section ends 20px after
+   its last visible line. Kept in layout (not display: none) because the charts read their width. */
+.sec > div:empty:not(:first-child), .sec > p:empty:not(:first-child) { margin-top: -14px; }
 
 /* Controls */
-button { font: 600 .95rem/1.2 var(--body); color: var(--ink); background: var(--raised); border: 1px solid var(--rule-strong); border-radius: 2px; padding: 10px 14px; cursor: pointer; touch-action: manipulation; }
+button { font: 600 .95rem/1.2 var(--body); color: var(--ink); background: var(--raised); border: 1px solid var(--rule-strong); border-radius: 2px; padding: 10px 14px; min-height: 44px; cursor: pointer; touch-action: manipulation; }
 button:active { background: var(--rule); }
+button:disabled { pointer-events: none; }
 button.primary { background: var(--yellow); color: var(--on-yellow); border-color: var(--yellow); font: 700 1.35rem/1 var(--display); text-transform: uppercase; letter-spacing: .05em; padding: 16px; }
-button.primary:active { filter: brightness(.88); }
-button.link { background: none; border: none; padding: 6px 4px; font-weight: 500; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
+button.primary:active { background: var(--yellow-press); border-color: var(--yellow-press); }
+/* Text buttons: 44px tall hit area, text stays where it was. Inside headings and label rows the extra height
+   is taken back with negative margins so the row does not grow. */
+button.link { background: none; border: none; padding: 0 8px; min-width: 44px; font-weight: 500; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
+button.link:active { opacity: .55; }
 button.link.danger { color: var(--down); }
+.lbl-row > .link, .sec-head > .link { margin-block: -14px; margin-right: -8px; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 input { font: 500 1rem var(--body); color: var(--ink); background: var(--raised); border: 1px solid var(--rule-strong); border-radius: 2px; padding: 10px 12px; width: 100%; min-width: 0; }
+input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
 .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .lbl-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .add-ex { display: flex; flex-wrap: wrap; gap: 8px; }
-.bw-check { flex-basis: 100%; display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); cursor: pointer; }
+.bw-check { flex-basis: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: .9rem; color: var(--muted); cursor: pointer; }
 .bw-check input, .bw-toggle input { width: 20px; height: 20px; margin: 0; accent-color: var(--yellow); }
-.add-ex input { flex: 1; }
+.add-ex > input { flex: 1; }
 
-.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * var(--gut)); padding-inline: var(--gut); }
+/* position: relative keeps the .sr text inside the scroller (it used to widen the page); the 4px block padding
+   keeps focus rings from being clipped and is taken back by the negative margin. */
+.chips { position: relative; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: -4px calc(-1 * var(--gut)); padding: 4px var(--gut); }
 .chips::-webkit-scrollbar { display: none; }
-.chip { flex: none; padding: 9px 13px; background: transparent; font-size: .92rem; white-space: nowrap; }
+.chip { flex: none; padding: 0 14px; background: transparent; font-size: .92rem; white-space: nowrap; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip[aria-pressed="true"]:active { opacity: .8; }
 .chip.add { border-style: dashed; color: var(--muted); }
 .chip.find { display: inline-flex; align-items: center; gap: 6px; border-color: var(--ink); }
-.lift-btn { display: inline-flex; align-items: center; gap: 10px; background: none; border: none; border-radius: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-align: left; min-width: 0; }
+.lift-btn { display: inline-flex; align-items: center; gap: 10px; background: none; border: none; border-radius: 0; padding: 0; margin: -5px 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-align: left; min-width: 0; }
 .lift-btn:active { background: none; opacity: .7; }
 .lift-btn svg { flex: none; color: var(--muted); }
 
@@ -113,7 +150,7 @@ dialog.pick-dialog { width: 100%; max-width: 560px; height: 100dvh; max-height: 
 #pick-results { flex: 1; overflow-y: auto; overscroll-behavior: contain; margin-inline: calc(-1 * var(--gut)); padding: 0 var(--gut) calc(env(safe-area-inset-bottom, 0px) + 24px); }
 .pk-sec { display: block; padding: 14px 0 6px; }
 .pk-row { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; text-align: left; background: transparent; border: none; border-top: 1px solid var(--rule); border-radius: 0; padding: 12px 2px; }
-.pk-row:active { background: var(--raised); }
+.pk-row:active, .lift-row:active, .pick:active { background: var(--raised); }
 .pk-name { font-weight: 600; font-size: 1.02rem; }
 .pk-sub { grid-column: 1; color: var(--muted); font-size: .85rem; font-weight: 400; }
 .pk-tag { grid-row: 1 / span 2; grid-column: 2; color: var(--muted); font: 600 .82rem var(--display); text-transform: uppercase; letter-spacing: .06em; }
@@ -125,12 +162,12 @@ dialog.pick-dialog { width: 100%; max-width: 560px; height: 100dvh; max-height: 
 .chip.done:not([aria-pressed="true"]) { color: var(--muted); }
 
 /* Log: lift name and the big readout */
-.edit-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--raised); border-left: 3px solid var(--yellow); padding: 6px 6px 6px 12px; font-size: .92rem; }
+.edit-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--raised); border-left: 3px solid var(--yellow); padding: 0 4px 0 12px; min-height: 44px; font-size: .92rem; }
 .lift-name { font: 700 2.2rem/1 var(--display); text-transform: uppercase; padding-bottom: 8px; border-bottom: 3px solid var(--ink); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; overflow-wrap: anywhere; }
 .lift-name .of { font: 600 1rem var(--display); color: var(--muted); white-space: nowrap; letter-spacing: .04em; }
 @media (prefers-reduced-motion: no-preference) {
-  .lift-name.flash { animation: flash 1s ease-out; }
-  @keyframes flash { 0%, 55% { border-bottom-color: var(--yellow); } 100% { border-bottom-color: var(--ink); } }
+  .lift-name.flash { animation: flash 250ms ease-out 550ms both; }
+  @keyframes flash { from { border-bottom-color: var(--yellow); } to { border-bottom-color: var(--ink); } }
 }
 .readout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 18px; }
 .rd { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -148,7 +185,7 @@ dialog.pick-dialog { width: 100%; max-width: 560px; height: 100dvh; max-height: 
 .plate { width: 10px; border-radius: 1px; outline: 1px solid var(--rule-strong); outline-offset: -1px; }
 .plates .txt { flex: 1; min-width: 150px; font-size: .9rem; color: var(--muted); }
 .plates .txt b { color: var(--ink); font: 600 1.05rem var(--display); }
-.bar-toggle { padding: 6px 10px; font-size: .82rem; }
+.bar-toggle { padding: 0 12px; font-size: .82rem; }
 
 /* Beat last time */
 .last-sets { font: 600 1.55rem/1.15 var(--display); font-variant-numeric: tabular-nums; }
@@ -158,6 +195,7 @@ dialog.pick-dialog { width: 100%; max-width: 560px; height: 100dvh; max-height: 
 .target small { color: var(--muted); font-weight: 500; font-size: .82rem; }
 .target[aria-pressed="true"] { background: var(--yellow); color: var(--on-yellow); border-color: var(--yellow); }
 .target[aria-pressed="true"] small { color: var(--on-yellow); }
+.target[aria-pressed="true"]:active { background: var(--yellow-press); border-color: var(--yellow-press); }
 .verdict { min-height: 1.45em; font-weight: 500; }
 .mk { display: inline-block; width: 1.15em; font-size: .85em; }
 .mk.up { color: var(--up); }
@@ -165,7 +203,7 @@ dialog.pick-dialog { width: 100%; max-width: 560px; height: 100dvh; max-height: 
 
 .session { color: var(--muted); font-size: .92rem; }
 .session b { color: var(--ink); font: 600 1.1rem var(--display); font-variant-numeric: tabular-nums; }
-.date-row { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.date-row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .date-row input { width: auto; padding: 8px 10px; }
 .status { font-size: .92rem; color: var(--muted); }
 .status:empty { display: none; }
@@ -185,7 +223,7 @@ dialog.pick-dialog { width: 100%; max-width: 560px; height: 100dvh; max-height: 
 .lg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0 6px; }
 .lg-head b { font-weight: 600; }
 .lg-head span { color: var(--muted); font-size: .85rem; white-space: nowrap; }
-.set-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 0 10px; padding: 8px 0; border-top: 1px solid var(--rule); }
+.set-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 0 10px; padding: 0; min-height: 45px; border-top: 1px solid var(--rule); }
 .set-row.editing { background: var(--raised); }
 .sn { font: 600 .95rem var(--display); color: var(--muted); font-variant-numeric: tabular-nums; padding-left: 2px; }
 .ld { font: 600 1.3rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
@@ -254,31 +292,34 @@ td.n { font: 600 1.05rem var(--display); font-variant-numeric: tabular-nums; }
 .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cal-head h3 { font-size: 1.15rem; }
 .cal-nav { display: flex; gap: 6px; }
-.cal-nav button { width: 40px; height: 36px; padding: 0; font: 700 1.2rem/1 var(--display); }
+.cal-nav button { width: 44px; height: 44px; padding: 0; font: 700 1.2rem/1 var(--display); }
 .cal-nav button:disabled { opacity: .35; cursor: default; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .cal-grid .dow { font: 600 .78rem var(--display); color: var(--muted); text-align: center; letter-spacing: .06em; }
-.cal-day { height: 38px; display: grid; place-items: center; font: 600 1rem var(--display); font-variant-numeric: tabular-nums; color: var(--muted); background: transparent; border: 1.5px solid transparent; border-radius: 2px; padding: 0; }
+.cal-day { height: 44px; display: grid; place-items: center; font: 600 1rem var(--display); font-variant-numeric: tabular-nums; color: var(--muted); background: transparent; border: 1.5px solid transparent; border-radius: 2px; padding: 0; }
 button.cal-day.on { background: var(--yellow); color: var(--on-yellow); border-color: var(--yellow); }
 .cal-day.today { border-color: var(--ink); color: var(--ink); }
-button.cal-day.on.today { box-shadow: inset 0 0 0 2px var(--on-yellow); }
+button.cal-day.on.today { outline: 2px solid var(--on-yellow); outline-offset: -5px; }
+button.cal-day.on:active { background: var(--yellow-press); border-color: var(--yellow-press); }
 .cal-foot { color: var(--muted); font-size: .88rem; }
 
 /* Body weight */
 .body-form { display: flex; gap: 8px; }
 .body-form input { flex: 1; font: 700 1.35rem var(--display); font-variant-numeric: tabular-nums; }
 #body-latest b { font: 700 1.25rem var(--display); }
-.bw-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 18px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.bw-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 18px; padding: 0; border-top: 1px solid var(--rule); }
 .bw-row .num { font-size: 1.1rem; font-weight: 600; }
 
 .backup-row { display: flex; gap: 8px; flex-wrap: wrap; }
+#backup-last { margin-top: -8px; }
+#backup-last:empty { display: none; }
 
 /* Tab bar */
 .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--bg); border-top: 1px solid var(--rule-strong); padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
 .tabbar .inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); height: var(--tabbar); }
 .tabbar button { position: relative; border: none; background: none; border-radius: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--muted); font: 600 .82rem var(--display); text-transform: uppercase; letter-spacing: .08em; padding: 6px 0; }
 .tabbar button svg { width: 22px; height: 22px; }
-.tabbar button[aria-selected="true"] { color: var(--ink); }
+.tabbar button[aria-selected="true"], .tabbar button:active { color: var(--ink); }
 .tabbar button[aria-selected="true"]::before { content: ""; position: absolute; top: -1px; left: 24%; right: 24%; height: 3px; background: var(--yellow); }
 
 /* Toasts sit at the top so they never cover the Log button */
@@ -286,11 +327,11 @@ button.cal-day.on.today { box-shadow: inset 0 0 0 2px var(--on-yellow); }
 .toast { pointer-events: auto; max-width: 480px; width: 100%; display: flex; align-items: center; gap: 12px; background: var(--ink); color: var(--bg); border-radius: 2px; padding: 12px 14px; font-size: .95rem; }
 .toast .tt { flex: 1; min-width: 0; }
 .toast.pr { background: var(--yellow); color: var(--on-yellow); }
-.toast button { background: transparent; color: inherit; border: 1px solid currentColor; padding: 6px 12px; font-size: .88rem; }
-@media (prefers-reduced-motion: no-preference) {
-  .toast { animation: drop .18s ease-out; }
-  @keyframes drop { from { transform: translateY(-10px); opacity: 0; } to { transform: none; opacity: 1; } }
-}
+.toast { padding-block: 6px; min-height: 48px; }
+.toast button { background: transparent; color: inherit; border: 1px solid currentColor; padding: 0 12px; margin-right: -8px; font-size: .88rem; }
+.toast button:active { opacity: .7; }
+.toast button:focus-visible { outline-color: currentColor; }
+.toast.out { pointer-events: none; }
 
 /* Sheets (scoring info, routine editor) */
 dialog { border: none; padding: 0; background: transparent; max-width: 520px; width: calc(100% - 32px); color: var(--ink); }
@@ -299,18 +340,112 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
 .sheet h2 { font-size: 1.55rem; }
 .sheet .formula { font: 600 1.2rem var(--display); border-block: 1px solid var(--rule); padding: 10px 0; text-align: center; }
 .sheet ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
-.sheet-btns { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+/* The button row stays pinned to the bottom of a sheet that scrolls, so Save / Done is always reachable at 375 x 667. */
+.sheet-btns { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  position: sticky; bottom: -20px; z-index: 1; margin: 0 -20px -20px; padding: 12px 20px 20px; background: var(--bg); border-top: 1px solid var(--rule); }
 .sheet-btns .danger { margin-right: auto; }
 .sheet-btns .primary { font-size: 1.15rem; padding: 12px 18px; }
 .pick-list { display: flex; flex-direction: column; }
 .lm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--rule); }
 .lm-row input.lm-name { padding: 8px 10px; }
 .lm-row.hidden-lift input.lm-name { color: var(--muted); }
-.bw-toggle { display: flex; align-items: center; gap: 6px; font: 600 .9rem var(--display); letter-spacing: .04em; color: var(--muted); cursor: pointer; }
+.bw-toggle { display: flex; align-items: center; gap: 6px; min-height: 44px; min-width: 44px; font: 600 .9rem var(--display); letter-spacing: .04em; color: var(--muted); cursor: pointer; }
 .lm-group { padding: 14px 0 4px; }
 .pick { display: flex; align-items: center; gap: 12px; background: transparent; border: none; border-top: 1px solid var(--rule); border-radius: 0; padding: 11px 2px; text-align: left; font-weight: 500; }
 .pick .ord { width: 26px; height: 26px; flex: none; border: 1.5px solid var(--rule-strong); display: grid; place-items: center; font: 700 .95rem var(--display); }
 .pick[aria-pressed="true"] .ord { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* In-page notice: one flat row between hairlines, text left, up to two buttons right (button.primary, button.link)
+   in .notice-btns. Goes first inside a tab (before .sec.first). If it does not fit, the buttons drop below, right-aligned. */
+.notice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 calc(-1 * var(--gut)) 12px; padding: 10px var(--gut); border-block: 1px solid var(--rule); }
+.notice-text { flex: 1 1 12rem; min-width: 0; font-size: .95rem; }
+.notice-btns { flex: none; margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.notice-btns .primary { font-size: 1.05rem; padding: 0 16px; }
+.notice-btns .link:last-child { margin-right: -8px; }
+
+/* First open, in place of the empty Today list: a heading and three numbered steps split by hairlines. */
+.first-run { display: flex; flex-direction: column; gap: 8px; }
+.first-run h3 { font-size: 1.15rem; }
+.first-run ol { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.first-run li { counter-increment: step; display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); align-items: baseline; gap: 0 10px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.first-run li::before { content: counter(step); font: 700 1.6rem/1 var(--display); font-variant-numeric: tabular-nums; }
+
+/* Focus rings: inset where an outer ring would be clipped or would sit on a neighbour. */
+.pk-row:focus-visible, .lift-row:focus-visible, .pick:focus-visible { outline-offset: -2px; }
+.tabbar button:focus-visible { outline-offset: -4px; }
+button.cal-day.on:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---------- Motion hooks (JS adds/removes these classes; CSS only says how they look) ----------
+   .toast.out             toast is leaving; remove the element on animationend (instantly under reduced motion)
+   .tab.enter             one-shot when a tab is shown; fade only, so the sticky .logbar never moves; remove on animationend
+   .set-row.new           the row just logged; marked once, fades after about a second; no yellow
+   dialog[open]           entrance of every dialog (.sheet dialogs and dialog.pick-dialog) and its ::backdrop
+   dialog.closing         exit; call close() on animationend (250ms fallback), then remove the class
+   .steps button.held     a stepper that is auto-repeating under a held thumb
+   Press states (:active) are instant on press and ease back over --dur-fast. Everything that moves is inside
+   prefers-reduced-motion: no-preference; the static parts (colours, the .new mark, .held) apply always. */
+.set-row.new { position: relative; isolation: isolate; }
+.set-row.new::before { content: ""; position: absolute; inset: 0 -8px; z-index: -1; background: var(--raised); border-left: 2px solid var(--ink); }
+.steps button.held { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+dialog.closing { pointer-events: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  button { transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+  button:active, .steps button.held { transition-duration: 0s; }
+  button:active, .steps button.held { transform: scale(.97); }
+  button.primary:active { transform: scale(.985); }
+  .pk-row:active, .lift-row:active, .pick:active, .lift-btn:active, button.link:active, .tabbar button:active { transform: none; }
+
+  .toast { animation: drop var(--dur) var(--ease); }
+  .toast.out { animation: toast-out var(--dur-fast) ease-in forwards; }
+  @keyframes drop { from { transform: translateY(-8px); opacity: 0; } }
+  @keyframes toast-out { to { transform: translateY(-6px); opacity: 0; } }
+
+  .tab.enter { animation: fade-in 160ms var(--ease); }
+  .notice { animation: fade-in var(--dur) var(--ease); }
+  @keyframes fade-in { from { opacity: 0; } }
+
+  .set-row.new { animation: row-in var(--dur) var(--ease); }
+  .set-row.new::before { animation: fade-out 250ms ease-in 900ms both; }
+  @keyframes row-in { from { opacity: 0; transform: translateY(-4px); } }
+  @keyframes fade-out { to { opacity: 0; } }
+
+  dialog[open] { animation: sheet-in var(--dur) var(--ease); }
+  dialog.closing { animation: sheet-out var(--dur-fast) ease-in forwards; }
+  @keyframes sheet-in { from { opacity: 0; transform: translateY(12px); } }
+  @keyframes sheet-out { to { opacity: 0; transform: translateY(12px); } }
+  /* Literal values: older engines do not pass custom properties into ::backdrop. */
+  dialog[open]::backdrop { animation: fade-in 200ms cubic-bezier(.2, .7, .2, 1); }
+  dialog.closing::backdrop { animation: fade-out 120ms ease-in forwards; }
+}
+/* Frontend: a tab that is not shown keeps its rendered state instead of being thrown away (display: none),
+   so switching back to it costs no style or layout work. Its contents stay unpainted, unfocusable and out of
+   the accessibility tree; browsers without content-visibility keep the plain [hidden] rule above. */
+@supports (content-visibility: hidden) {
+  .wrap > section.tab[hidden] { display: flex !important; content-visibility: hidden; }
+}
+
+/* Phone shell: keyboard, long-press, overscroll, safe areas. Added on top of the rules above; none of them is rewritten. */
+/* A pull-down mid-set can't reload or bounce the page; scrollers inside keep their scroll to themselves. */
+html, body { overscroll-behavior-y: none; }
+.sheet, #pick-results { overscroll-behavior: contain; }
+.chips { overscroll-behavior-x: contain; }
+/* A held thumb selects nothing and opens no callout. Inputs and logged text stay selectable. */
+button, .chip, .steps, .tabbar, label.bw-check, label.bw-toggle { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+label.bw-check, label.bw-toggle, .chips, .cal-grid, .notice { touch-action: manipulation; }
+/* Safe areas on all four sides (top and bottom were already there; this adds the sides, for landscape and notches). */
+.wrap { padding-left: calc(var(--gut) + env(safe-area-inset-left, 0px)); padding-right: calc(var(--gut) + env(safe-area-inset-right, 0px)); }
+.toasts { padding-left: calc(16px + env(safe-area-inset-left, 0px)); padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
+dialog { width: calc(100% - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); }
+.sheet { max-height: calc(100dvh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+.pick-dialog .sheet { padding-left: calc(var(--gut) + env(safe-area-inset-left, 0px)); padding-right: calc(var(--gut) + env(safe-area-inset-right, 0px)); }
+/* On-screen keyboard open (JS sets html.kb-open and --kb, the keyboard's height over the page): the tab bar steps
+   aside and Log set sits directly on top of the keyboard. Nothing else changes size, so nothing jumps when it closes. */
+html.kb-open .tabbar { display: none; }
+html.kb-open .logbar { bottom: var(--kb, 0px); }
+html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + 24px); }
+/* Share Lift Tracker: a text button at the bottom of History, its text lined up with the column. */
+#share-app { align-self: flex-start; margin-left: -8px; }
 </style>
 </head>
 <body>
@@ -323,6 +458,13 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
 
   <!-- LOG -->
   <section class="tab" id="tab-log" aria-labelledby="tb-log">
+    <div class="notice" id="install-row" role="status" hidden>
+      <p class="notice-text" id="install-text">Install Lift Tracker. It opens like an app and works with no signal.</p>
+      <div class="notice-btns">
+        <button type="button" class="primary" id="install-yes">Install</button>
+        <button type="button" class="link" id="install-no">Not now</button>
+      </div>
+    </div>
     <div class="sec first">
       <div class="field">
         <div class="lbl-row"><span class="lbl" id="routine-label">Routine</span><button type="button" class="link small" id="edit-routine" hidden>Edit routine</button></div>
@@ -340,7 +482,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
         <div class="lift-name" id="lift-name"></div>
         <div class="readout">
           <div class="rd">
-            <input id="weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" aria-describedby="weight-l">
+            <input id="weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" enterkeyhint="next" aria-describedby="weight-l">
             <label for="weight" class="unit-l" id="weight-l">kg</label>
             <div class="steps">
               <button type="button" data-step="weight" data-d="-2.5" aria-label="2.5 kg less">−2.5</button>
@@ -348,7 +490,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
             </div>
           </div>
           <div class="rd">
-            <input id="reps" type="number" inputmode="numeric" min="1" step="1" placeholder="0" aria-describedby="reps-l">
+            <input id="reps" type="number" inputmode="numeric" min="1" step="1" placeholder="0" enterkeyhint="done" aria-describedby="reps-l">
             <label for="reps" class="unit-l" id="reps-l">reps</label>
             <div class="steps">
               <button type="button" data-step="reps" data-d="-1" aria-label="1 rep less">−1</button>
@@ -442,12 +584,17 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     <div class="sec">
       <h2>Backup</h2>
       <p class="small muted">Your log is saved on this phone only. Export a backup file now and then, and import it to restore your log or move it to another device.</p>
+      <p class="small muted" id="backup-last"></p>
       <div class="backup-row">
         <button type="button" id="export-btn">Export backup</button>
         <button type="button" id="import-btn">Import backup</button>
         <input type="file" id="import-file" accept="application/json,.json" hidden>
       </div>
       <p class="status" id="backup-status" role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="sec" id="share-sec" hidden>
+      <button type="button" class="link" id="share-app">Share Lift Tracker</button>
     </div>
   </section>
 </div>
@@ -592,30 +739,223 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ---------- Storage (on this device only) ----------
-  const validSet = (s) => s && typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && s.exercise && Number.isFinite(s.weightKg) && s.weightKg >= 0 && s.reps >= 1;
-  const cleanRoutine = (r) => (r && typeof r.id === "string" && typeof r.name === "string" && r.name.trim() && Array.isArray(r.lifts)
-    ? { id: r.id, name: r.name.trim().slice(0, 30), lifts: r.lifts.filter((x) => typeof x === "string" && x) } : null);
+  // The log is one localStorage value (KEY). Loading never throws and never throws data away: if the stored
+  // text is damaged, it is kept byte for byte under RESCUE_KEY before the app is allowed to write again.
+  const PREV_KEY = "lift-tracker:prev";       // the log as it was before the first save of the day, and before every import
+  const RESCUE_KEY = "lift-tracker:rescue";   // { savedAt, reason, raw }: a damaged log, exactly as it was stored
+  const RESCUE2_KEY = "lift-tracker:rescue-2"; // a second rescue copy, used only when the first holds something else
+  const LOG_KEYS = ["version", "sets", "exercises", "routines", "hidden", "bodyweight"];
+  const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const isQuota = (e) => !!e && (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED" || e.code === 22);
+  const realDate = (d) => {
+    if (typeof d !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+    const y = +d.slice(0, 4), m = +d.slice(5, 7), day = +d.slice(8);
+    const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    return m >= 1 && m <= 12 && day >= 1 && day <= [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  };
+  // "102.5" becomes 102.5; anything else is left exactly as it was.
+  const toNum = (v) => (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : v);
+  const validSet = (s) => isObj(s) && typeof s.exercise === "string" && s.exercise !== "" && realDate(s.date)
+    && typeof s.weightKg === "number" && Number.isFinite(s.weightKg) && s.weightKg >= 0
+    && Number.isInteger(s.reps) && s.reps >= 1;
+  // The set with numeric strings turned into numbers (every other field kept as is), or null if it can't be used.
+  function repairSet(s) {
+    if (!isObj(s)) return null;
+    const r = { ...s, weightKg: toNum(s.weightKg), reps: toNum(s.reps) };
+    if ("sets" in s) r.sets = toNum(s.sets);
+    if ("createdAt" in s) r.createdAt = toNum(s.createdAt);
+    return validSet(r) ? r : null;
+  }
+  // Edit and Delete find sets by id, so a missing or repeated id gets a new one (stored on the next save).
+  function giveIds(list) {
+    const seen = new Set();
+    return list.map((s) => {
+      let id = typeof s.id === "number" && Number.isFinite(s.id) ? String(s.id) : s.id;
+      if (typeof id !== "string" || !id || seen.has(id)) id = newId();
+      seen.add(id);
+      return id === s.id ? s : { ...s, id };
+    });
+  }
+  const validEx = (e) => isObj(e) && typeof e.name === "string" && e.name !== "";
+  const cleanRoutine = (r) => (isObj(r) && typeof r.id === "string" && typeof r.name === "string" && r.name.trim() && Array.isArray(r.lifts)
+    ? { ...r, id: r.id, name: r.name.trim().slice(0, 30), lifts: r.lifts.filter((x) => typeof x === "string" && x) } : null);
   const cleanRoutines = (list) => (Array.isArray(list) ? list.map(cleanRoutine).filter((r) => r && r.lifts.length) : []);
   const cleanHidden = (list) => (Array.isArray(list) ? [...new Set(list.filter((x) => typeof x === "string" && x))] : []);
-  const cleanBody = (list) => (Array.isArray(list) ? list.filter((b) => b && /^\d{4}-\d{2}-\d{2}$/.test(b.date) && b.kg > 0 && b.kg < 500) : []);
-  function load() {
+  const cleanBody = (list) => (Array.isArray(list)
+    ? list.map((b) => (isObj(b) ? { ...b, kg: toNum(b.kg) } : null)).filter((b) => b && realDate(b.date) && typeof b.kg === "number" && b.kg > 0 && b.kg < 500) : []);
+  const emptyLog = () => ({ sets: [], customEx: [], routines: [], hidden: [], body: [], extra: {} });
+  const isLogText = (t) => { try { const o = JSON.parse(t); return isObj(o) && (o.sets === undefined || Array.isArray(o.sets)); } catch (_) { return false; } };
+
+  // Reads stored text. data is null when the text isn't a usable log at all; dropped counts records that had to be left out.
+  function parseLog(raw) {
+    let obj;
+    try { obj = JSON.parse(raw); } catch (_) { return { data: null, dropped: 0, why: "Not valid JSON" }; }
+    if (!isObj(obj)) return { data: null, dropped: 0, why: "Not a log object" };
+    if (obj.sets !== undefined && obj.sets !== null && !Array.isArray(obj.sets)) return { data: null, dropped: 0, why: "The list of sets is damaged" };
+    let dropped = 0;
+    const list = (k) => { const v = obj[k]; if (v === undefined || v === null) return []; if (!Array.isArray(v)) { dropped++; return []; } return v; };
+    const rawSets = list("sets"), sets = rawSets.map(repairSet).filter(Boolean);
+    const rawEx = list("exercises"), customEx = rawEx.filter(validEx);
+    const rawRt = list("routines"), routines = cleanRoutines(rawRt);
+    const rawHid = list("hidden"), hidden = cleanHidden(rawHid);
+    const rawBody = list("bodyweight"), body = cleanBody(rawBody);
+    dropped += rawSets.length - sets.length + rawEx.length - customEx.length + rawRt.length - routines.length
+      + rawHid.filter((x) => !(typeof x === "string" && x)).length + rawBody.length - body.length;
+    const extra = {};
+    for (const k of Object.keys(obj)) if (!LOG_KEYS.includes(k)) extra[k] = obj[k];
+    return { data: { sets: giveIds(sets), customEx, routines, hidden, body, extra }, dropped, why: dropped ? `${dropped} saved ${dropped === 1 ? "entry" : "entries"} could not be read` : "" };
+  }
+
+  let lastRaw = null;     // the stored text this window last read or wrote; anything else there came from another window
+  let lastRawOk = true;   // whether lastRaw is a usable log (only usable logs are copied to PREV_KEY)
+  let readOnly = false;   // the stored log is damaged and no safe copy of it could be kept: save() refuses to overwrite it
+  let extraKeys = {};     // top-level keys this version doesn't know about, written back unchanged
+  let damage = null;      // what the last load found wrong, for the notice: { raw, why, from, dropped, readOnly }
+  let recoveryToast = null;
+  const getRaw = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+
+  // Keeps damaged text in a rescue slot. Never overwrites a slot that holds different content.
+  // Returns false if the text couldn't be kept anywhere.
+  function keepRescue(raw, why, mayDropPrev) {
+    const slots = [RESCUE_KEY, RESCUE2_KEY];
+    const held = slots.map((k) => {
+      const v = getRaw(k); if (v === null) return null;
+      try { const o = JSON.parse(v); return isObj(o) && typeof o.raw === "string" ? o.raw : undefined; } catch (_) { return undefined; }
+    });
+    if (held.includes(raw)) return true;
+    const free = slots[held.indexOf(null)];
+    if (!free) return false;
+    const text = JSON.stringify({ savedAt: new Date().toISOString(), reason: why, raw });
+    try { localStorage.setItem(free, text); return true; } catch (e) {
+      // The rescue copy matters more than yesterday's copy; make room once if the full log is still readable.
+      if (!mayDropPrev || !isQuota(e) || getRaw(PREV_KEY) === null) return false;
+      try { localStorage.removeItem(PREV_KEY); localStorage.setItem(free, text); return true; } catch (_) { return false; }
+    }
+  }
+
+  function readLog() {
+    damage = null; readOnly = false;
+    let raw = null;
     try {
-      const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
-      state.sets = (raw.sets || []).filter(validSet);
-      state.customEx = (raw.exercises || []).filter((e) => e && e.name);
-      state.routines = cleanRoutines(raw.routines);
-      state.hidden = cleanHidden(raw.hidden);
-      state.body = cleanBody(raw.bodyweight);
-    } catch (_) { state.sets = []; state.customEx = []; state.routines = []; state.hidden = []; state.body = []; }
-    try { prefs = { ...prefs, ...JSON.parse(localStorage.getItem(PREFS_KEY) || "{}") }; } catch (_) {}
+      raw = getRaw(KEY);
+      let res = raw === null ? { data: emptyLog(), dropped: 0 } : parseLog(raw);
+      lastRawOk = !!res.data;
+      if (raw !== null && (!res.data || res.dropped)) {
+        let from = "main";
+        if (!res.data) {
+          const p = getRaw(PREV_KEY), pr = p === null ? null : parseLog(p);
+          if (pr && pr.data) { res = pr; from = "prev"; } else { res = { data: emptyLog(), dropped: 0 }; from = "empty"; }
+        }
+        const why = from === "main" ? res.why : (parseLog(raw).why || "Could not be read");
+        readOnly = !keepRescue(raw, why, from === "main");
+        damage = { raw, why, from, dropped: from === "main" ? res.dropped : 0, readOnly };
+      }
+      const d = res.data;
+      state.sets = d.sets; state.customEx = d.customEx; state.routines = d.routines; state.hidden = d.hidden; state.body = d.body;
+      extraKeys = d.extra;
+    } catch (_) {
+      // Should never happen; if it does, show nothing rather than write over something this code didn't understand.
+      const d = emptyLog();
+      state.sets = d.sets; state.customEx = d.customEx; state.routines = d.routines; state.hidden = d.hidden; state.body = d.body;
+      extraKeys = {}; lastRawOk = false;
+      if (raw !== null) { readOnly = !keepRescue(raw, "Could not be read", false); damage = { raw, why: "Could not be read", from: "empty", dropped: 0, readOnly }; }
+    }
+    lastRaw = raw;
   }
-  const snapshot = () => ({ version: 1, sets: state.sets, exercises: state.customEx, routines: state.routines, hidden: state.hidden, bodyweight: state.body });
+  function load() {
+    readLog();
+    try { const p = JSON.parse(getRaw(PREFS_KEY) || "{}"); if (isObj(p)) prefs = { ...prefs, ...p }; } catch (_) {}
+  }
+  const snapshot = () => ({ version: 1, sets: state.sets, exercises: state.customEx, routines: state.routines, hidden: state.hidden, bodyweight: state.body, ...extraKeys });
+
+  // Copies the stored log to PREV_KEY: once per calendar day before the first write, and before every import.
+  // The main save comes first, so if the copy doesn't fit it is deleted and the save carries on.
+  function copyPrev(force) {
+    const day = todayKey();
+    if (!force && prefs.prevCopiedOn === day) return;
+    const cur = getRaw(KEY);
+    if (cur !== null && (cur === lastRaw ? lastRawOk : isLogText(cur))) {
+      try { localStorage.setItem(PREV_KEY, cur); } catch (_) { try { localStorage.removeItem(PREV_KEY); } catch (_) {} }
+    }
+    prefs.prevCopiedOn = day; savePrefs();
+  }
+  // Throws when the log can't be written; callers rely on that to roll back.
   function save() {
-    localStorage.setItem(KEY, JSON.stringify(snapshot()));
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    if (readOnly) { showRecovery(); const e = new Error("The stored log is damaged and couldn't be copied"); e.name = "LiftReadOnly"; throw e; }
+    const text = JSON.stringify(snapshot());
+    copyPrev(false);
+    try { localStorage.setItem(KEY, text); } catch (e) {
+      // Room for the log comes first: give up the day-old copy and try once more.
+      if (!isQuota(e) || getRaw(PREV_KEY) === null) throw e;
+      try { localStorage.removeItem(PREV_KEY); } catch (_) {}
+      localStorage.setItem(KEY, text);
+    }
+    lastRaw = text; lastRawOk = true;
+    queueBackupLine();
   }
+  // The "Last backup" line is refreshed in a task of its own, so it never slows down logging a set.
+  let lineTimer = 0;
+  const queueBackupLine = () => { if (!lineTimer) lineTimer = setTimeout(() => { lineTimer = 0; try { showBackupLine(); } catch (_) {} }, 0); };
   function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (_) {} }
   const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+  function downloadText(name, text, type) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(text instanceof Blob ? text : new Blob([text], { type }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  // One sticky notice when the stored log was damaged; "Save copy" downloads the damaged text exactly as stored.
+  function showRecovery() {
+    const d = damage;
+    if (!d || (recoveryToast && recoveryToast.isConnected)) return;
+    const msg = d.readOnly ? "Your saved log is damaged and there's no room to keep a safe copy, so nothing new is saved until you tap Save copy."
+      : d.from === "prev" ? "Your saved log couldn't be read, so this phone's earlier copy was loaded and the damaged one was kept."
+      : d.from === "empty" ? "Your saved log couldn't be read, so the app started empty and the damaged one was kept."
+      : `${d.dropped} saved ${d.dropped === 1 ? "entry" : "entries"} couldn't be read, so a copy of your log as it was has been kept.`;
+    const saved = () => { if (d.readOnly) { d.readOnly = false; readOnly = false; toast("Copy saved. New sets are saved again."); } };
+    recoveryToast = toast(msg, { ms: 0, action: { label: "Save copy", fn: () => {
+      // On a phone a download can silently do nothing (an installed iPhone app), so share the copy as a .txt file
+      // (iOS and Android both accept text/plain) and only let the app write again once the share went through.
+      const name = `lift-tracker-damaged-${todayKey()}.txt`;
+      const file = typeof File === "function" ? new File([d.raw], name, { type: "text/plain" }) : null;
+      if (matchMedia("(pointer: coarse)").matches && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file] }).then(saved, () => {
+          if (!d.readOnly) return;
+          toast("No copy was saved, so new sets still aren't saved. Tap Save copy to try again.", { ms: 4000 });
+          setTimeout(() => { recoveryToast = null; showRecovery(); }, 300);
+        });
+        return;
+      }
+      let json = false; try { JSON.parse(d.raw); json = true; } catch (_) {}
+      downloadText(`lift-tracker-damaged-${todayKey()}.${json ? "json" : "txt"}`, d.raw, json ? "application/json" : "text/plain");
+      // The damaged text is now in the person's hands, so the app may write again.
+      saved();
+    } } });
+  }
+
+  // Another window (or tab) changed the log: load what it saved. No merging; the form's typed values stay.
+  function syncFromStorage() {
+    if (getRaw(KEY) === lastRaw) return;
+    const editing = state.editingId;
+    readLog();
+    if (damage) showRecovery();
+    if (editing && !state.sets.some((s) => s.id === editing)) stopEditing(); else render();
+    queueBackupLine();
+  }
+  function syncPrefs() {
+    let p; try { p = JSON.parse(getRaw(PREFS_KEY) || "{}"); } catch (_) { return; }
+    if (!isObj(p)) return;
+    for (const k of ["lastExportAt", "backupNudgeAt", "prevCopiedOn"]) if (p[k] != null && !(prefs[k] >= p[k])) prefs[k] = p[k];
+    queueBackupLine();
+  }
+  addEventListener("storage", (e) => {
+    if (e.key === KEY || e.key === null) syncFromStorage();
+    if (e.key === PREFS_KEY || e.key === null) syncPrefs();
+  });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { syncFromStorage(); syncPrefs(); } });
+  addEventListener("pageshow", (e) => { if (e.persisted) { syncFromStorage(); syncPrefs(); } });
 
   // ---------- Strength math ----------
   const kg1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
@@ -642,12 +982,40 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   }
   const formDate = () => $("#date").value || todayKey();
 
-  function exerciseList() {
-    const names = [...DEFAULT_EX];
-    for (const e of [...state.customEx].sort((a, b) => (a.order || 0) - (b.order || 0))) if (!names.includes(e.name)) names.push(e.name);
-    for (const s of state.sets) if (!names.includes(s.exercise)) names.push(s.exercise);
-    return names;
+  // One index per revision of the log. Nothing changes state.sets in place (every change assigns a new array),
+  // so the array itself identifies the revision. Helpers hand out copies, never the index's own arrays.
+  // Dates are validated YYYY-MM-DD, so comparing them with < orders them exactly as bySetOrder does.
+  const fastOrder = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0));
+  let IX = null;
+  function setIndex() {
+    const sets = state.sets;
+    if (IX && IX.sets === sets) return IX;
+    const sorted = [...sets].sort(fastOrder);       // stable: ties keep the order they were logged in
+    const byEx = new Map(), inOrder = new Map(), byDate = new Map();
+    const add = (map, k, s) => { const l = map.get(k); if (l) l.push(s); else map.set(k, [s]); };
+    for (const s of sets) add(inOrder, s.exercise, s); // per lift, in the order stored
+    for (const s of sorted) { add(byEx, s.exercise, s); add(byDate, s.date, s); }
+    IX = { sets, sorted, byEx, inOrder, byDate, weeks: new Map(), memo: {} };
+    return IX;
   }
+  // Read-only views for render code: all sets oldest first, and one lift's sets oldest first (both copies).
+  const sortedSets = () => setIndex().sorted.slice();
+  // A date's week never changes, so its Monday is worked out once per date for the whole session.
+  const weekKeys = new Map();
+  const weekKeyOf = (date) => { let k = weekKeys.get(date); if (k === undefined) { k = toKey(weekStart(date)); weekKeys.set(date, k); } return k; };
+  const setsOf = (ex) => (setIndex().byEx.get(ex) || []).slice();
+
+  function exerciseList() {
+    const ix = setIndex(), m = ix.memo;
+    if (!m.names || m.namesFor !== state.customEx) {
+      const names = [...DEFAULT_EX];
+      for (const e of [...state.customEx].sort((a, b) => (a.order || 0) - (b.order || 0))) if (!names.includes(e.name)) names.push(e.name);
+      for (const ex of ix.inOrder.keys()) if (!names.includes(ex)) names.push(ex);
+      m.names = names; m.namesFor = state.customEx;
+    }
+    return m.names.slice();
+  }
+
   // Lifts offered for logging and in the routine editor; hidden ones keep their history elsewhere.
   const visibleLifts = () => exerciseList().filter((n) => !state.hidden.includes(n));
   const liftPool = () => (visibleLifts().length ? visibleLifts() : exerciseList());
@@ -655,16 +1023,20 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   // "200" for a barbell lift; "BW" or "BW +10" for a bodyweight lift.
   const wt = (ex, w) => (isBW(ex) || w === 0 ? (w > 0 ? `BW +${kgTrim(w)}` : "BW") : kgTrim(w));
   const wtKg = (ex, w) => (isBW(ex) || w === 0 ? `${wt(ex, w)}${w > 0 ? " kg" : ""}` : `${kgTrim(w)} kg`);
-  const lastSetOf = (ex) => state.sets.filter((s) => s.exercise === ex).sort(bySetOrder).at(-1) || null;
-  const setsOn = (ex, date) => state.sets.filter((s) => s.exercise === ex && s.date === date).sort(bySetOrder);
+  const lastSetOf = (ex) => { const l = setIndex().byEx.get(ex); return l ? l[l.length - 1] : null; };
+  const setsOn = (ex, date) => (setIndex().byDate.get(date) || []).filter((s) => s.exercise === ex);
   const setCount = (list) => list.reduce((n, s) => n + (s.sets || 1), 0);
 
   // The most recent session of a lift before `before`, and its best set.
   function lastSession(ex, before) {
-    const prior = state.sets.filter((s) => s.exercise === ex && s.date < before);
-    if (!prior.length) return null;
-    const date = prior.reduce((d, s) => (s.date > d ? s.date : d), "");
-    const sets = prior.filter((s) => s.date === date).sort(bySetOrder);
+    const l = setIndex().byEx.get(ex) || [];
+    let lo = 0, hi = l.length;                       // first index whose date is not before `before`
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (l[mid].date < before) lo = mid + 1; else hi = mid; }
+    if (!lo) return null;
+    const date = l[lo - 1].date;
+    let start = lo - 1;
+    while (start > 0 && l[start - 1].date === date) start--;
+    const sets = l.slice(start, lo);
     return { date, sets, top: bestSet(sets) };
   }
   // "200 kg × 8 · 8 · 7" when the weight stayed the same, else "80×8 · 85×6".
@@ -680,16 +1052,19 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   const doneToday = (ex) => setsOn(ex, formDate()).length > 0;
   const nextLift = (r) => r.lifts.find((ex) => ex !== state.selected && !doneToday(ex)) || null;
 
-  function weeksFor(ex) {
+  // Weeks are built from the lift's sets in stored order (ties keep the first stored), as before.
+  function weeksOf(ex) {
+    const ix = setIndex();
+    let weeks = ix.weeks.get(ex);
+    if (weeks) return weeks;
     const map = new Map();
-    for (const s of state.sets) {
-      if (s.exercise !== ex) continue;
-      const start = weekStart(s.date), key = toKey(start);
+    for (const s of ix.inOrder.get(ex) || []) {
+      const key = weekKeyOf(s.date);
       let w = map.get(key);
-      if (!w) { w = { key, start, top: s }; map.set(key, w); }
+      if (!w) { w = { key, start: parse(key), top: s }; map.set(key, w); }
       if (heavier(s, w.top)) w.top = s;
     }
-    const weeks = [...map.values()].sort((a, b) => a.start - b.start);
+    weeks = [...map.values()].sort((a, b) => a.start - b.start);
     let allTime = null;
     weeks.forEach((w, i) => {
       w.best = w.top.weightKg;
@@ -697,57 +1072,70 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       w.isPR = i > 0 && heavier(w.top, allTime);
       if (!allTime || heavier(w.top, allTime)) allTime = w.top;
     });
+    ix.weeks.set(ex, weeks);
     return weeks;
   }
+  const weeksFor = (ex) => weeksOf(ex).map((w) => ({ ...w, start: new Date(w.start) }));
+
 
   // A PR is the heaviest weight you've lifted on a lift; at the same weight, more reps also counts.
   const heavier = (a, b) => a.weightKg > b.weightKg || (a.weightKg === b.weightKg && a.reps > b.reps);
   const bestSet = (list) => list.reduce((top, s) => (!top || heavier(s, top) ? s : top), null);
   // Sets that beat every earlier set of the same lift. The first set of a lift is its baseline.
   function prIds() {
-    const ids = new Set(), best = new Map();
-    for (const s of [...state.sets].sort(bySetOrder)) {
-      const top = best.get(s.exercise);
-      if (top && heavier(s, top)) ids.add(s.id);
-      if (!top || heavier(s, top)) best.set(s.exercise, s);
+    const m = setIndex().memo;
+    if (!m.prs) {
+      const ids = new Set(), best = new Map();
+      for (const s of setIndex().sorted) {
+        const top = best.get(s.exercise);
+        if (top && heavier(s, top)) ids.add(s.id);
+        if (!top || heavier(s, top)) best.set(s.exercise, s);
+      }
+      m.prs = ids;
     }
-    return ids;
+    return new Set(m.prs);
   }
-
-  // Consecutive Mon–Sun weeks with at least one set. This week only counts once it has a set.
-  function streaks() {
-    const weeks = new Set(state.sets.map((s) => toKey(weekStart(s.date))));
-    const back = (d) => { const x = new Date(d); x.setDate(x.getDate() - 7); return x; };
-    let cur = 0, d = weekStart(todayKey());
-    if (!weeks.has(toKey(d))) d = back(d);
-    while (weeks.has(toKey(d))) { cur++; d = back(d); }
-    const sorted = [...weeks].sort();
-    let longest = 0, run = 0, prev = null;
-    for (const k of sorted) {
-      run = prev && Math.round((parse(k) - parse(prev)) / (7 * DAY)) === 1 ? run + 1 : 1;
-      longest = Math.max(longest, run); prev = k;
+  // Depends on today's date as well as the log, so the cached result is only reused on the same day.
+  function streakData() {
+    const m = setIndex().memo, today = todayKey();
+    if (!m.streak || m.streakDay !== today) {
+      const weeks = new Set(state.sets.map((s) => weekKeyOf(s.date)));
+      const back = (d) => { const x = new Date(d); x.setDate(x.getDate() - 7); return x; };
+      let cur = 0, d = weekStart(today);
+      if (!weeks.has(toKey(d))) d = back(d);
+      while (weeks.has(toKey(d))) { cur++; d = back(d); }
+      const sorted = [...weeks].sort();
+      let longest = 0, run = 0, prev = null;
+      for (const k of sorted) {
+        run = prev && Math.round((parse(k) - parse(prev)) / (7 * DAY)) === 1 ? run + 1 : 1;
+        longest = Math.max(longest, run); prev = k;
+      }
+      m.streak = { cur, longest, weeks }; m.streakDay = today;
     }
-    return { cur, longest, weeks };
+    return m.streak;
   }
-
+  const streaks = () => { const s = streakData(); return { cur: s.cur, longest: s.longest, weeks: new Set(s.weeks) }; };
   function stats() {
-    const prs = prIds();
-    const { cur, longest, weeks } = streaks();
-    const liftsByWeek = new Map(), firstWeekBest = new Map(), bestEver = new Map();
-    for (const s of state.sets) {
-      const wk = toKey(weekStart(s.date));
-      if (!liftsByWeek.has(wk)) liftsByWeek.set(wk, new Set());
-      liftsByWeek.get(wk).add(s.exercise);
-      bestEver.set(s.exercise, Math.max(bestEver.get(s.exercise) || 0, s.weightKg));
+    const ix = setIndex(), m = ix.memo, today = todayKey();
+    if (!m.stats || m.statsDay !== today) {
+      const prs = prIds();
+      const { cur, longest, weeks } = streakData();
+      const liftsByWeek = new Map(), bestEver = new Map();
+      let maxWeight = 0;
+      for (const s of state.sets) {
+        const wk = weekKeyOf(s.date);
+        if (!liftsByWeek.has(wk)) liftsByWeek.set(wk, new Set());
+        liftsByWeek.get(wk).add(s.exercise);
+        bestEver.set(s.exercise, Math.max(bestEver.get(s.exercise) || 0, s.weightKg));
+        maxWeight = Math.max(maxWeight, s.weightKg);
+      }
+      let maxGain = 0, maxLifts = 0;
+      for (const [ex, b] of bestEver) maxGain = Math.max(maxGain, b - (weeksOf(ex)[0].best || b));
+      for (const x of liftsByWeek.values()) maxLifts = Math.max(maxLifts, x.size);
+      m.stats = { prs, prCount: prs.size, streak: cur, longest, trainedWeeks: weeks, maxLifts, maxWeight, maxGain };
+      m.statsDay = today;
     }
-    for (const ex of exerciseList()) { const w = weeksFor(ex); if (w.length) firstWeekBest.set(ex, w[0].best); }
-    let maxGain = 0;
-    for (const [ex, b] of bestEver) maxGain = Math.max(maxGain, b - (firstWeekBest.get(ex) || b));
-    return {
-      prs, prCount: prs.size, streak: cur, longest, trainedWeeks: weeks,
-      maxLifts: Math.max(0, ...[...liftsByWeek.values()].map((x) => x.size)),
-      maxWeight: Math.max(0, ...state.sets.map((s) => s.weightKg)), maxGain,
-    };
+    return { ...m.stats, prs: new Set(m.stats.prs), trainedWeeks: new Set(m.stats.trainedWeeks) };
   }
 
   const BADGES = [
@@ -774,8 +1162,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     return { list, exact, nearest };
   }
   function renderPlates() {
-    $("#plates").hidden = isBW(state.selected);
-    $("#weight-l").textContent = isBW(state.selected) ? "added kg" : "kg";
+    const bw = isBW(state.selected), unit = bw ? "added kg" : "kg";
+    if ($("#plates").hidden !== bw) $("#plates").hidden = bw;
+    if ($("#weight-l").textContent !== unit) $("#weight-l").textContent = unit;
     const w = parseFloat($("#weight").value), bar = prefs.barKg;
     const r = platesFor(w, bar);
     const toggle = `<button type="button" class="bar-toggle" id="bar-toggle" aria-label="Bar weight ${bar} kg, tap to change">Bar ${bar} kg</button>`;
@@ -788,7 +1177,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       html = `<span class="bar-visual" aria-hidden="true"><span class="shaft"></span>${r.list.map((p) => `<span class="plate" style="height:${h(p)}px;background:var(${PLATE_VAR[p]})"></span>`).join("")}</span>
         <span class="txt">Per side: <b>${r.list.map(kgTrim).join(" + ")}</b>${r.exact ? "" : `<br>Nearest loadable: <b>${kgTrim(r.nearest)} kg</b>`}</span>`;
     }
-    $("#plates").innerHTML = html + toggle;
+    setHTML($("#plates"), html + toggle);
   }
 
   // ---------- Small UI helpers ----------
@@ -802,20 +1191,98 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     return mk + (dw ? n(dw, "kg") : n(dr, "reps"));
   }
 
+  // Read live, so turning reduced motion on or off applies without a reload.
+  const calmMQ = matchMedia("(prefers-reduced-motion: reduce)");
+  const calm = () => reduceMotion || calmMQ.matches;
+  // Calls fn once el's own animation `name` ends, or after `ms` if it never does (reduced motion, a hidden
+  // page, a cancelled animation). Returns a function that cancels the wait without calling fn.
+  function afterAnim(el, name, ms, fn) {
+    let done = false;
+    const stop = () => { done = true; clearTimeout(t); el.removeEventListener("animationend", end); };
+    const end = (e) => {
+      if (done || (e && (e.target !== el || e.animationName !== name || e.pseudoElement))) return;
+      stop(); fn();
+    };
+    const t = setTimeout(end, ms);
+    el.addEventListener("animationend", end);
+    return stop;
+  }
+  // Writes innerHTML only when it changed, so typing doesn't rebuild (and re-lay-out) identical markup.
+  const setHTML = (el, html) => { if (el._html !== html) { el.innerHTML = html; el._html = html; } };
+  // iOS Safari only shows :active press states once the page has a touchstart listener.
+  document.addEventListener("touchstart", () => {}, { passive: true });
+
+  // At most 3 on screen. A toast with an action stays at least 5 seconds; ms: 0 stays until tapped.
   function toast(html, { kind = "", action = null, ms = 3200 } = {}) {
     const box = $("#toasts");
-    while (box.children.length >= 3) box.firstChild.remove();
+    let live = [...box.children].filter((t) => !t.classList.contains("out"));
+    while (live.length >= 3) {
+      // Make room by dropping the oldest timed toast; sticky ones (recovery, reminders) go last.
+      const old = live.find((t) => !t.dataset.sticky) || live[0];
+      old.remove(); live = live.filter((t) => t !== old);
+    }
     const el = document.createElement("div");
     el.className = "toast " + kind;
     el.innerHTML = `<span class="tt">${html}</span>`;
     if (action) {
       const b = document.createElement("button"); b.type = "button"; b.textContent = action.label;
-      b.addEventListener("click", () => { action.fn(); el.remove(); });
+      b.addEventListener("click", () => { try { action.fn(); } finally { dropToast(el); } });
       el.appendChild(b);
+      if (ms) ms = Math.max(ms, 5000);
     }
+    if (!ms) el.dataset.sticky = "1";
     box.appendChild(el);
-    if (ms) setTimeout(() => el.remove(), ms);
+    if (ms) el._timer = setTimeout(() => dropToast(el), ms);
     return el;
+  }
+  // Leaves through .toast.out, then is removed; instantly with reduced motion.
+  function dropToast(el) {
+    clearTimeout(el._timer);
+    if (!el.isConnected || el.classList.contains("out")) return;
+    if (calm()) return el.remove();
+    el.classList.add("out");
+    afterAnim(el, "toast-out", 250, () => el.remove());
+  }
+
+  // Every dialog opens and closes through these two (Escape, backdrop taps and the phone's Back button too).
+  function openSheet(dlg) {
+    if (dlg._stopClose) { dlg._stopClose(); dlg._stopClose = null; }
+    dlg.classList.remove("closing");
+    if (dlg.open) return;
+    const a = document.activeElement;
+    dlg._opener = a && a !== document.body ? a : null;
+    dlg._openerId = (a && a.id) || "";
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  }
+  function closeSheet(dlg) {
+    if (!dlg.open || dlg.classList.contains("closing")) return;
+    if (calm()) return endSheet(dlg);
+    dlg.classList.add("closing");
+    dlg._stopClose = afterAnim(dlg, "sheet-out", 250, () => { dlg._stopClose = null; endSheet(dlg); });
+  }
+  function endSheet(dlg) {
+    if (!dlg.open) return;
+    if (dlg.close) dlg.close();
+    else { dlg.removeAttribute("open"); dlg.dispatchEvent(new Event("close")); }
+  }
+  // Runs however the dialog ended up closed: clears the exit state and puts focus back where it came from.
+  function sheetClosed(dlg) {
+    if (dlg._stopClose) { dlg._stopClose(); dlg._stopClose = null; }
+    dlg.classList.remove("closing");
+    const o = dlg._opener;
+    dlg._opener = null;
+    // The lift picker hands focus to the lift name it just set; other openers may have been re-rendered.
+    const back = dlg.id === "pick-sheet" ? $("#lift-btn")
+      : o && o.isConnected ? o : dlg._openerId ? document.getElementById(dlg._openerId) : null;
+    if (back && back.getClientRects().length) back.focus({ preventScroll: true });
+  }
+  for (const dlg of document.querySelectorAll("dialog")) {
+    // Escape: take the same animated path instead of the instant native close.
+    dlg.addEventListener("cancel", (e) => { e.preventDefault(); closeSheet(dlg); });
+    dlg.addEventListener("close", () => sheetClosed(dlg));
+    // A tap on the backdrop (press and release both outside the sheet) closes it.
+    dlg.addEventListener("pointerdown", (e) => { dlg._downOut = e.target === dlg; });
+    dlg.addEventListener("click", (e) => { if (e.target === dlg && dlg._downOut !== false) closeSheet(dlg); dlg._downOut = null; });
   }
   const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (_) {} };
   function flash() {
@@ -839,19 +1306,19 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   // ---------- Render: Log tab ----------
   function renderRoutines() {
     const r = activeRoutine();
-    $("#routines").innerHTML = `<button type="button" class="chip" data-routine="" aria-pressed="${!r}">Any lift</button>`
+    setHTML($("#routines"), `<button type="button" class="chip" data-routine="" aria-pressed="${!r}">Any lift</button>`
       + state.routines.map((x) => `<button type="button" class="chip" data-routine="${esc(x.id)}" aria-pressed="${x.id === prefs.routineId}">${esc(x.name)}</button>`).join("")
-      + `<button type="button" class="chip add" id="new-routine-btn">+ Routine</button>`;
+      + `<button type="button" class="chip add" id="new-routine-btn">+ Routine</button>`);
     $("#edit-routine").hidden = !r;
   }
-  // Visible lifts you've logged, most recently used first.
+  // Visible lifts you've logged, most recently used first (one indexed lookup per lift, not a scan of every set).
   function recentLifts() {
     const last = new Map();
-    for (const s of state.sets) {
-      const k = `${s.date}|${String(s.createdAt || 0).padStart(15, "0")}`;
-      if (!last.has(s.exercise) || k > last.get(s.exercise)) last.set(s.exercise, k);
+    for (const n of liftPool()) {
+      const s = lastSetOf(n);
+      if (s) last.set(n, `${s.date}|${String(s.createdAt || 0).padStart(15, "0")}`);
     }
-    return liftPool().filter((n) => last.has(n)).sort((a, b) => (last.get(b) > last.get(a) ? 1 : -1));
+    return [...last.keys()].sort((a, b) => (last.get(b) > last.get(a) ? 1 : -1));
   }
   function renderChips() {
     const r = activeRoutine();
@@ -863,10 +1330,10 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       names = [...recent, ...liftPool().filter((n) => !recent.includes(n))].slice(0, 8);
       if (state.selected && !names.includes(state.selected)) names = [state.selected, ...names.slice(0, 7)];
     }
-    $("#chips").innerHTML = `<button type="button" class="chip find" id="find-btn">${SEARCH_SVG}Search</button>` + names.map((n) => {
+    setHTML($("#chips"), `<button type="button" class="chip find" id="find-btn">${SEARCH_SVG}Search</button>` + names.map((n) => {
       const done = r && doneToday(n);
       return `<button type="button" class="chip${done ? " done" : ""}" data-ex="${esc(n)}" aria-pressed="${n === state.selected}">${done ? `<span aria-hidden="true">✓ </span>` : ""}${esc(n)}${done ? `<span class="sr">, done today</span>` : ""}</button>`;
-    }).join("");
+    }).join(""));
     requestAnimationFrame(revealChip);
   }
   // Keep the selected lift visible in the sideways-scrolling row.
@@ -890,7 +1357,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   function renderLog() {
     const r = activeRoutine(), ex = state.selected, d = formDate();
     const pos = r ? r.lifts.indexOf(ex) : -1;
-    $("#lift-name").innerHTML = `<button type="button" class="lift-btn" id="lift-btn" aria-label="Change lift, now ${esc(ex)}"><span>${esc(ex)}</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${pos >= 0 ? `<span class="of">${pos + 1} of ${r.lifts.length}</span>` : ""}`;
+    setHTML($("#lift-name"), `<button type="button" class="lift-btn" id="lift-btn" aria-label="Change lift, now ${esc(ex)}"><span>${esc(ex)}</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${pos >= 0 ? `<span class="of">${pos + 1} of ${r.lifts.length}</span>` : ""}`);
     const done = setsOn(ex, d);
     $("#submit-btn").textContent = state.editingId ? "Save changes" : `Log set ${setCount(done) + 1}`;
     const line = $("#session-line");
@@ -908,7 +1375,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const w = parseFloat($("#weight").value), r = parseInt($("#reps").value, 10);
     const valid = w > 0 && r >= 1;
     if (!last) {
-      box.innerHTML = `<h2>Last time</h2><p class="muted">First time logging ${esc(state.selected)}. This set becomes your baseline, and next time you'll get a target to beat.</p>`;
+      setHTML(box, `<h2>Last time</h2><p class="muted">First time logging ${esc(state.selected)}. This set becomes your baseline, and next time you'll get a target to beat.</p>`);
       return;
     }
     const t = last.top;
@@ -922,20 +1389,21 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       const word = heavier(set, t) ? "Ahead of last time" : heavier(t, set) ? (w < t.weightKg ? "Lighter than last time" : "Below last time") : "Matches last time";
       verdict = heavier(set, t) || heavier(t, set) ? `${change(set, t)} · ${word}` : `<span class="mk" aria-hidden="true">=</span>${word}`;
     }
-    box.innerHTML = `<div class="sec-head"><h2>Last time</h2><span>${dayLabel(last.date)}</span></div>
+    setHTML(box, `<div class="sec-head"><h2>Last time</h2><span>${dayLabel(last.date)}</span></div>
       <div class="last-sets">${summary(last.sets)}</div>
       <span class="lbl">Beat it</span>
       <div class="targets">${targets.map((x) => `<button type="button" class="target" data-w="${x.w}" data-r="${x.r}" aria-pressed="${valid && x.w === w && x.r === r}"><b>${wt(state.selected, x.w)} × ${x.r}</b><small>${x.why}</small></button>`).join("")}</div>
-      <p class="verdict">${verdict}</p>`;
+      <p class="verdict">${verdict}</p>`);
   }
+  // Runs on every keystroke and stepper tick; both parts skip the DOM write when nothing changed.
   function updatePreview() {
-    const w = parseFloat($("#weight").value), r = parseInt($("#reps").value, 10);
     renderPlates();
     renderBeat();
   }
 
-  // One block per lift: a header, then each set numbered with Edit and Delete.
-  function liftGroups(items, prs) {
+  // One block per lift: a header, then each set numbered with Edit and Delete. `fresh` is the id of the
+  // set just logged, which gets the one-time .new mark.
+  function liftGroups(items, prs, fresh) {
     const by = new Map();
     for (const s of [...items].sort(bySetOrder)) { if (!by.has(s.exercise)) by.set(s.exercise, []); by.get(s.exercise).push(s); }
     return [...by].map(([ex, list]) => {
@@ -943,7 +1411,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       const rows = list.map((s) => {
         const k = s.sets || 1, label = k > 1 ? `${n + 1}–${n + k}` : `${n + 1}`;
         n += k;
-        return `<div class="set-row${s.id === state.editingId ? " editing" : ""}">
+        return `<div class="set-row${s.id === state.editingId ? " editing" : ""}${fresh && s.id === fresh ? " new" : ""}">
           <span class="sn">${label}</span>
           <span class="ld">${wt(s.exercise, s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}</span>
           <span class="acts">
@@ -954,14 +1422,31 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       return `<div class="lift-group"><div class="lg-head"><b>${esc(ex)}</b><span>${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"}</span></div>${rows}</div>`;
     }).join("");
   }
+  // The id of the set just logged: highlighted once on the next Today render, then forgotten.
+  let freshId = null, freshTimer = 0;
   function renderToday(prs) {
-    const list = state.sets.filter((s) => s.date === todayKey());
+    const list = setIndex().byDate.get(todayKey()) || [];
     const r = activeRoutine();
     const routineDone = r && list.length && r.lifts.every((ex) => list.some((s) => s.exercise === ex));
     $("#today-sum").textContent = routineDone ? `${r.name} done ✓`
       : list.length ? `${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"}` : "";
-    $("#today-list").innerHTML = list.length ? liftGroups(list, prs)
+    const box = $("#today-list");
+    box.innerHTML = list.length ? liftGroups(list, prs, freshId)
+      // A brand-new log explains itself here; no separate welcome screen.
+      : !state.sets.length ? `<div class="first-run">
+          <h3>Log your first set</h3>
+          <ol>
+            <li>Pick a lift above.</li>
+            <li>Set the weight and reps.</li>
+            <li>Tap Log set once for each set you finish.</li>
+          </ol>
+        </div>`
       : `<p class="empty"><strong>Nothing logged today.</strong>Pick a lift, set the weight and reps, then tap Log set. Log each set as you finish it.</p>`;
+    freshId = null;
+    // The mark fades by itself with motion on; with reduced motion it is a still mark, so it is taken off.
+    clearTimeout(freshTimer);
+    const row = box.querySelector(".set-row.new");
+    if (row) freshTimer = setTimeout(() => row.classList.remove("new"), 1200);
   }
 
   // ---------- Render: Progress tab ----------
@@ -986,10 +1471,13 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   }
   const chartEx = () => (state.chartEx && exerciseList().includes(state.chartEx) ? state.chartEx : state.selected);
 
+  const prOf = (ex) => bestSet(setsOf(ex));
+  const allWeeks = () => exerciseList().map((ex) => ({ ex, weeks: weeksFor(ex) }));
+  // Strength gained: kg added to the best set since the first week, over lifts logged in at least two weeks.
+  const gainOf = (all) => all.filter((x) => x.weeks.length >= 2).reduce((t, x) => t + (prOf(x.ex).weightKg - x.weeks[0].best), 0);
   function renderProgress(all, st) {
     const tracked = all.filter((x) => x.weeks.length >= 2);
-    const prOf = (ex) => bestSet(state.sets.filter((s) => s.exercise === ex).sort(bySetOrder));
-    const total = tracked.reduce((t, x) => t + (prOf(x.ex).weightKg - x.weeks[0].best), 0);
+    const total = gainOf(all);
     $("#gain-num").dataset.v = total;
     paintGain(total);
     if (!state.sets.length) $("#gain-sub").textContent = "Log your first set to set a baseline. Next week, add reps or weight and the gain shows here.";
@@ -1085,15 +1573,19 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     for (const s of [1, 2, 2.5, 5, 10, 20, 25, 50]) if (s >= raw) return s;
     return 100;
   }
+  let chartKey = null;   // what the chart on screen was drawn from; the same inputs are not drawn twice
   function renderChart(weeks) {
     const box = $("#chart"), ex = chartEx();
+    const W = Math.max(280, box.clientWidth || 520), H = 220;
+    const key = [ex, W, weeks.length, state.sets, state.customEx];
+    if (chartKey && box.firstChild && key.every((v, i) => v === chartKey[i])) return;
+    chartKey = key;
     $("#chart-sub").textContent = ex || "";
     $("#legend").hidden = weeks.length < 2;
     if (!weeks.length) {
       box.innerHTML = `<p class="empty"><strong>No ${esc(ex || "")} sets yet.</strong>Each week you log this lift becomes a point here.</p>`;
       return;
     }
-    const W = Math.max(280, box.clientWidth || 520), H = 220;
     const m = { l: 40, r: 18, t: 24, b: 28 };
     const iw = W - m.l - m.r, ih = H - m.t - m.b;
     const t0 = weeks[0].start.getTime();
@@ -1185,7 +1677,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     const day = e.target.closest("[data-day]"); if (!day) return;
     const key = day.dataset.day;
     // Make sure that day is loaded in the list before scrolling to it.
-    const sorted = [...state.sets].sort(bySetOrder).reverse();
+    const sorted = sortedSets().reverse();
     let lastIdx = -1; sorted.forEach((s, i) => { if (s.date === key) lastIdx = i; });
     if (lastIdx >= state.histLimit) { state.histLimit = lastIdx + 21; renderHistory(prIds()); }
     const el = document.getElementById("day-" + key);
@@ -1194,7 +1686,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
 
   function renderHistory(prs) {
     renderCal();
-    const sorted = [...state.sets].sort(bySetOrder).reverse();
+    const sorted = sortedSets().reverse();
     $("#hist-count").textContent = sorted.length ? `${setCount(sorted)} ${setCount(sorted) === 1 ? "set" : "sets"}` : "";
     const list = sorted.slice(0, state.histLimit);
     $("#show-more").hidden = sorted.length <= state.histLimit;
@@ -1211,38 +1703,78 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     $("#week-label").textContent = first ? `Week ${Math.max(1, Math.round((weekStart(todayKey()) - weekStart(first)) / (7 * DAY)) + 1)}` : "";
   }
 
+  // Only the tab on screen is drawn; the others are marked dirty and drawn when they are shown.
+  const TABS = ["log", "progress", "history"];
+  const dirty = new Set(TABS);
+  let curTab = null;          // the tab on screen; null until boot shows one
+  let pendingGain = null;     // a PR raised Strength gained: count up from this the next time Progress is shown
+  function renderTab(name) {
+    // Log and History only need the PR marks; the full stats are for Progress.
+    if (name === "log") { renderRoutines(); renderChips(); renderLog(); updatePreview(); renderToday(prIds()); }
+    else if (name === "progress") renderProgress(allWeeks(), stats());
+    else renderHistory(prIds());
+    dirty.delete(name);
+  }
+  // Logging a set saves at once (so a failed save can roll back) and redraws in the next frame, before it is
+  // painted: two shorter tasks instead of one long one. A render() in between makes the queued one unnecessary.
+  // The Log button also stays under the thumb: if a line appears above it (the first set of a lift today adds
+  // the session line), the page scrolls by the same amount instead of the button sliding down.
+  // y0 is where the button was before anything changed (read while the layout is still clean, so it's free).
+  let queued = 0;
+  const renderNextFrame = (y0) => {
+    if (queued) return;
+    queued = requestAnimationFrame(() => {
+      queued = 0;
+      render();
+      const dy = $("#submit-btn").getBoundingClientRect().top - y0;
+      if (Math.abs(dy) >= 1 && !$("#tab-log").hidden) scrollBy(0, dy);
+    });
+  };
   function render() {
+    if (queued) { cancelAnimationFrame(queued); queued = 0; }
     const r = activeRoutine();
     const pool = r ? r.lifts : liftPool();
     if (!state.editingId && (!state.selected || !pool.includes(state.selected))) {
       if (r) state.selected = r.lifts.find((ex) => !doneToday(ex)) || r.lifts[0];
-      else { const latest = [...state.sets].sort(bySetOrder).at(-1); state.selected = latest && pool.includes(latest.exercise) ? latest.exercise : pool[0]; }
+      else { const latest = sortedSets().at(-1); state.selected = latest && pool.includes(latest.exercise) ? latest.exercise : pool[0]; }
       if (!state.editingId) fillFromLast(state.selected);
     }
-    const st = stats();
-    const all = exerciseList().map((ex) => ({ ex, weeks: weeksFor(ex) }));
-    renderTop(); renderRoutines(); renderChips(); renderLog(); updatePreview();
-    renderToday(st.prs);
-    renderProgress(all, st);
-    renderHistory(st.prs);
+    renderTop();
+    for (const t of TABS) dirty.add(t);
+    if (curTab) renderTab(curTab);
   }
 
   // ---------- Tabs ----------
+  const tabScroll = {};       // where each tab was scrolled to when it was left
+  const stopEnter = {};
   function setTab(name) {
+    // The tab that's already open (a second tap, or a jump to it): back to the top.
+    if (name === curTab) { scrollTo({ top: 0, behavior: calm() ? "auto" : "smooth" }); return; }
+    if (curTab) tabScroll[curTab] = scrollY;
+    const first = !curTab;
+    curTab = name;
     prefs.tab = name; savePrefs();
-    for (const t of ["log", "progress", "history"]) {
+    for (const t of TABS) {
       $("#tab-" + t).hidden = t !== name;
       $("#tb-" + t).setAttribute("aria-selected", t === name);
     }
-    if (name === "progress") { renderChart(weeksFor(chartEx())); renderBody(); }
-    scrollTo({ top: 0 });
+    if (dirty.has(name)) renderTab(name);
+    if (name === "progress" && pendingGain !== null) { animateGain(pendingGain); pendingGain = null; }
+    scrollTo(0, tabScroll[name] || 0);
+    // A short fade on the section only (never the log form, which also has class "tab"), so the sticky bar stays put.
+    const sec = $("#tab-" + name);
+    if (stopEnter[name]) stopEnter[name]();
+    if (first || calm()) { sec.classList.remove("enter"); return; }
+    sec.classList.add("enter");
+    stopEnter[name] = afterAnim(sec, "fade-in", 300, () => { sec.classList.remove("enter"); stopEnter[name] = null; });
   }
   document.querySelector(".tabbar").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
 
   // ---------- Logging (one set per tap) ----------
   function say(msg, isErr) { const s = $("#status"); s.textContent = msg; s.classList.toggle("err", !!isErr); }
   function errText(e) {
-    if (e && e.name === "QuotaExceededError") return "Your phone's storage for this app is full. Export a backup and delete some old sets.";
+    if (e && e.name === "LiftReadOnly") return "Nothing was saved: your saved log is damaged and there's no room to keep a safe copy of it. Tap Save copy on the notice first.";
+    if (isQuota(e)) return "Your phone's storage for this app is full. Export a backup and delete some old sets.";
     return "Couldn't save on this device. Check that the browser isn't in private mode.";
   }
   function readForm() {
@@ -1257,24 +1789,29 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     return fresh.map((id) => BADGES.find((b) => b.id === id));
   }
   function logSet(f) {
-    const prevTop = bestSet(state.sets.filter((s) => s.exercise === f.exercise));
-    const gainBefore = parseFloat($("#gain-num").dataset.v) || 0;
+    const btnTop = $("#submit-btn").getBoundingClientRect().top;
+    const prevTop = bestSet(setsOf(f.exercise));
+    const isPR = !!prevTop && heavier(f, prevTop);
+    // Strength gained before this PR, for the count-up the next time Progress is shown.
+    const gainBefore = isPR && pendingGain === null ? gainOf(allWeeks()) : null;
+    const nth = setCount(setsOn(f.exercise, f.date)) + (f.sets || 1);   // read before the log changes
     const entry = { ...f, id: newId(), createdAt: Date.now() };
     const before = state.sets;
     state.sets = [...state.sets, entry];
     try { save(); } catch (e) { state.sets = before; throw e; }
-    const isPR = !!prevTop && heavier(f, prevTop);
-    const newBadges = celebrate(prefs.seenBadges || []);
-    render();
+    freshId = entry.id;
+    renderNextFrame(btnTop);
     if (isPR) {
-      buzz([40, 60, 40]); flash(); animateGain(gainBefore);
+      if (gainBefore !== null) pendingGain = gainBefore;
+      buzz([40, 60, 40]); requestAnimationFrame(flash);
       const why = f.weightKg > prevTop.weightKg ? `heaviest ever, +${kgTrim(f.weightKg - prevTop.weightKg)} kg` : `most reps at ${wtKg(f.exercise, f.weightKg)}`;
       toast(`<b>PR</b> · ${esc(f.exercise)} ${wtKg(f.exercise, f.weightKg)} × ${f.reps}, ${why}`, { kind: "pr", ms: 4500 });
     } else {
       buzz(20);
-      toast(`Set ${setCount(setsOn(f.exercise, f.date))} logged: <b>${wt(f.exercise, f.weightKg)} × ${f.reps}</b>`, { ms: 1800 });
+      toast(`Set ${nth} logged: <b>${wt(f.exercise, f.weightKg)} × ${f.reps}</b>`, { ms: 1800 });
     }
-    for (const b of newBadges) toast(`<b>✓ Milestone</b> · ${b.name}`, { ms: 5000 });
+    // Milestones need the full stats, so they are worked out in a task of their own after the set shows.
+    setTimeout(() => { for (const b of celebrate(prefs.seenBadges || [])) toast(`<b>✓ Milestone</b> · ${b.name}`, { ms: 5000 }); }, 0);
   }
 
   $("#log-form").addEventListener("submit", (ev) => {
@@ -1287,7 +1824,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
       if (state.editingId) {
         const before = state.sets;
         // An older entry may hold several sets in one line; editing keeps that count.
-        state.sets = state.sets.map((x) => (x.id === state.editingId ? { ...f, sets: x.sets || 1, id: x.id, createdAt: x.createdAt } : x));
+        // Fields this version doesn't know about stay on the set; id and createdAt come from the original.
+        state.sets = state.sets.map((x) => (x.id === state.editingId ? { ...x, ...f, sets: x.sets || 1 } : x));
         try { save(); } catch (e) { state.sets = before; throw e; }
         prefs.seenBadges = earnedIds(stats()); savePrefs();
         stopEditing();
@@ -1296,13 +1834,46 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     } catch (e) { say(errText(e), true); }
   });
 
-  document.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
+  // Steppers: one step on press; held past 350ms they repeat every 80ms until the thumb lifts or slides off.
+  // Returns false at the floor (0 kg, 1 rep), which also ends a repeat.
+  function stepOnce(b) {
     const input = $("#" + b.dataset.step), d = parseFloat(b.dataset.d);
     const min = b.dataset.step === "weight" ? 0 : 1;
     const cur = parseFloat(input.value) || (b.dataset.step === "weight" ? 0 : min);
-    input.value = kgTrim(Math.max(min, Math.round((cur + d) * 100) / 100));
+    const next = kgTrim(Math.max(min, Math.round((cur + d) * 100) / 100));
+    if (input.value === next) return false;
+    input.value = next;
     updatePreview();
-  }));
+    return true;
+  }
+  let hold = null;
+  function stopHold() {
+    if (!hold) return;
+    clearTimeout(hold.wait); clearInterval(hold.rep);
+    hold.b.classList.remove("held");
+    hold = null;
+  }
+  document.querySelectorAll("[data-step]").forEach((b) => {
+    b.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      // No default: focus stays where it is, so the keyboard neither opens nor closes.
+      e.preventDefault();
+      stopHold();
+      if (!stepOnce(b)) return;
+      const h = hold = { b, wait: 0, rep: 0 };
+      h.wait = setTimeout(() => {
+        b.classList.add("held");
+        h.rep = setInterval(() => { if (hold !== h || !stepOnce(b)) stopHold(); }, 80);
+      }, 350);
+    });
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    for (const ev of ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"]) b.addEventListener(ev, stopHold);
+    // Enter and Space (and click() from code) arrive as a click with no pointer: one step. A pointer
+    // press already stepped on pointerdown, so its click is ignored.
+    b.addEventListener("click", (e) => { if (!e.detail && !e.pointerType) stepOnce(b); });
+  });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopHold(); });
+  addEventListener("blur", stopHold);
   $("#weight").addEventListener("input", updatePreview);
   $("#reps").addEventListener("input", updatePreview);
   $("#date").addEventListener("change", render);
@@ -1351,22 +1922,26 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     pick.q = ""; pick.group = "All";
     $("#pick-q").value = "";
     renderPicker();
-    psheet.showModal ? psheet.showModal() : psheet.setAttribute("open", "");
+    openSheet(psheet);
     $("#pick-results").scrollTop = 0;
     $("#pick-q").focus();
   }
+  // Lift names never change their library entry, so each name is looked up once per session.
+  const libMemo = new Map();
+  const libOf = (n) => { let e = libMemo.get(n); if (e === undefined) { e = libFind(n); libMemo.set(n, e); } return e; };
   function renderPicker() {
-    const mine = [...recentLifts(), ...liftPool().filter((n) => !recentLifts().includes(n))];
-    const groupOf = (n) => (libFind(n) ? libFind(n).g : "Other");
+    const recent = recentLifts(), seen = new Set(recent);
+    const mine = [...recent, ...liftPool().filter((n) => !seen.has(n))];
+    const groupOf = (n) => (libOf(n) ? libOf(n).g : "Other");
     const groups = ["All", ...GROUPS, ...(mine.some((n) => groupOf(n) === "Other") ? ["Other"] : [])];
     if (!groups.includes(pick.group)) pick.group = "All";
-    $("#pick-groups").innerHTML = groups.map((g) => `<button type="button" class="chip" data-group="${g}" aria-pressed="${g === pick.group}">${g}</button>`).join("");
+    setHTML($("#pick-groups"), groups.map((g) => `<button type="button" class="chip" data-group="${g}" aria-pressed="${g === pick.group}">${g}</button>`).join(""));
     const inGroup = (g) => pick.group === "All" || g === pick.group;
     const rank = (list, texts) => list.map((x, i) => ({ x, i, sc: matchScore(pick.q, texts(x)) }))
       .filter((o) => o.sc < Infinity).sort((a, b) => a.sc - b.sc || a.i - b.i).map((o) => o.x);
-    const yours = rank(mine.filter((n) => inGroup(groupOf(n))), liftTexts);
+    const yours = rank(mine.filter((n) => inGroup(groupOf(n))), (n) => { const e = libOf(n); return e ? [n, e.n, ...e.a] : [n]; });
     // Library entries you don't already have (an "RDL" you added hides "Romanian Deadlift").
-    const have = new Set(mine.map(libFind).filter(Boolean));
+    const have = new Set(mine.map(libOf).filter(Boolean));
     const lib = rank(LIBRARY.filter((e) => inGroup(e.g) && !have.has(e)), (e) => [e.n, ...e.a]);
     const row = (n) => {
       const last = lastSetOf(n);
@@ -1383,14 +1958,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     if (!yours.length && !lib.length) html += `<p class="pk-empty">${q ? `No lift matches “${esc(q)}”.` : `No ${pick.group.toLowerCase()} lifts yet.`}</p>`;
     if (q && !exact) html += `<div class="pk-new"><button type="button" class="primary" id="pick-add">Add “${esc(q)}”</button>
       <label class="bw-check"><input type="checkbox" id="pick-bw"> Bodyweight lift (pull-ups, dips, push-ups)</label></div>`;
-    $("#pick-results").innerHTML = html;
+    setHTML($("#pick-results"), html);
   }
   // Selects a lift from the picker, adding it to your list first if it came from the library or search.
   function chooseLift(name, bodyweight) {
     let n = name;
     if (!exerciseList().some((x) => x === name)) {
       const res = addExerciseName(name, bodyweight);
-      if (res.err) { $("#pick-results").insertAdjacentHTML("afterbegin", `<p class="status err">${esc(res.err)}</p>`); return; }
+      if (res.err) { const box = $("#pick-results"); box.insertAdjacentHTML("afterbegin", `<p class="status err">${esc(res.err)}</p>`); box._html = null; return; }
       n = res.name;
     }
     if (state.hidden.includes(n)) { state.hidden = state.hidden.filter((x) => x !== n); try { save(); } catch (_) {} }
@@ -1398,11 +1973,18 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     if (r && !r.lifts.includes(n)) { prefs.routineId = null; savePrefs(); }
     state.selected = n; state.chartEx = null;
     if (!state.editingId) fillFromLast(n);
-    psheet.close();
+    closeSheet(psheet);
     render();
     $("#lift-name").scrollIntoView({ block: "nearest" });
   }
-  $("#pick-q").addEventListener("input", (e) => { pick.q = e.target.value; renderPicker(); $("#pick-results").scrollTop = 0; });
+  // Back to the top of the results when they change. scrollTop is read before the new rows go in and only
+  // written when it isn't 0 already, so typing doesn't force a layout in the middle of the keystroke.
+  function renderPickerTop() {
+    const box = $("#pick-results"), scrolled = box.scrollTop > 0;
+    renderPicker();
+    if (scrolled) box.scrollTop = 0;
+  }
+  $("#pick-q").addEventListener("input", (e) => { pick.q = e.target.value; renderPickerTop(); });
   $("#pick-q").addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -1411,7 +1993,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   });
   $("#pick-groups").addEventListener("click", (e) => {
     const g = e.target.closest("[data-group]"); if (!g) return;
-    pick.group = g.dataset.group; renderPicker(); $("#pick-results").scrollTop = 0;
+    pick.group = g.dataset.group; renderPickerTop();
   });
   $("#pick-results").addEventListener("click", (e) => {
     const mineRow = e.target.closest("[data-pick]"), libRowEl = e.target.closest("[data-lib]");
@@ -1420,7 +2002,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     // Phone keyboards type lowercase; "sissy squat" is saved as "Sissy Squat" (RDL stays RDL).
     if (e.target.closest("#pick-add")) return chooseLift(pick.q.trim().replace(/\s+/g, " ").replace(/\b[a-z]/g, (c) => c.toUpperCase()), $("#pick-bw").checked);
   });
-  $("#pick-close").addEventListener("click", () => psheet.close());
+  $("#pick-close").addEventListener("click", () => closeSheet(psheet));
   $("#lift-name").addEventListener("click", (e) => { if (e.target.closest("#lift-btn")) openPicker(); });
   $("#lib-names").innerHTML = LIBRARY.map((e) => `<option value="${esc(e.n)}">`).join("");
 
@@ -1480,9 +2062,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     if (before) toast(`Renamed ${esc(old)} to ${esc(name)}.`, { ms: 5000, action: { label: "Undo", fn: () => restoreSnapshot(before) } });
     return null;
   }
-  $("#edit-lifts").addEventListener("click", () => { lsay(""); renderManage(); lsheet.showModal ? lsheet.showModal() : lsheet.setAttribute("open", ""); });
-  $("#lifts-done").addEventListener("click", () => lsheet.close());
-  lsheet.addEventListener("click", (e) => { if (e.target === lsheet) lsheet.close(); });
+  $("#edit-lifts").addEventListener("click", () => { lsay(""); renderManage(); openSheet(lsheet); });
+  $("#lifts-done").addEventListener("click", () => closeSheet(lsheet));
   $("#lift-manage").addEventListener("change", (e) => {
     const rowEl = e.target.closest(".lm-row"); if (!rowEl) return;
     const ex = rowEl.dataset.ex;
@@ -1538,7 +2119,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     $("#routine-delete").hidden = !r;
     rsay("");
     renderPicks();
-    rsheet.showModal ? rsheet.showModal() : rsheet.setAttribute("open", "");
+    openSheet(rsheet);
   }
   function renderPicks() {
     const d = state.draft;
@@ -1578,18 +2159,17 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     if (state.editingId) stopEditing();
     prefs.routineId = entry.id; savePrefs();
     state.selected = null; state.chartEx = null;
-    rsheet.close(); render();
+    closeSheet(rsheet); render();
     toast(`Saved ${esc(name)}: ${entry.lifts.length} ${entry.lifts.length === 1 ? "lift" : "lifts"}.`);
   });
-  $("#routine-cancel").addEventListener("click", () => rsheet.close());
-  rsheet.addEventListener("click", (e) => { if (e.target === rsheet) rsheet.close(); });
+  $("#routine-cancel").addEventListener("click", () => closeSheet(rsheet));
   $("#routine-delete").addEventListener("click", () => {
     const gone = state.routines.find((r) => r.id === state.draft.id); if (!gone) return;
     const before = state.routines, wasActive = prefs.routineId === gone.id;
     state.routines = state.routines.filter((r) => r.id !== gone.id);
     try { save(); } catch (err) { state.routines = before; return rsay(errText(err)); }
     if (wasActive) { prefs.routineId = null; savePrefs(); }
-    rsheet.close(); render();
+    closeSheet(rsheet); render();
     toast(`Deleted ${esc(gone.name)}`, {
       ms: 5000,
       action: { label: "Undo", fn: () => {
@@ -1609,7 +2189,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
     $("#date").value = s.date; $("#weight").value = s.weightKg; $("#reps").value = s.reps;
     $("#edit-text").textContent = `Editing ${s.exercise}, ${wt(s.exercise, s.weightKg)} × ${s.reps}`;
     $("#edit-bar").hidden = false;
-    setTab("log"); render();
+    // Draw first (the open tab shows the row being edited), then go to the form at the top of Log
+    // (setTab scrolls an already open Log to the top by itself).
+    const from = curTab;
+    render(); setTab("log");
+    if (from !== "log") scrollTo(0, 0);
   }
   function stopEditing() {
     state.editingId = null; state.dateOpen = false;
@@ -1645,60 +2229,350 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
 
   // ---------- Info sheet ----------
   const sheet = $("#info-sheet");
-  $("#info-btn").addEventListener("click", () => (sheet.showModal ? sheet.showModal() : sheet.setAttribute("open", "")));
-  $("#info-close").addEventListener("click", () => sheet.close());
-  sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });
+  $("#info-btn").addEventListener("click", () => openSheet(sheet));
+  $("#info-close").addEventListener("click", () => closeSheet(sheet));
 
   // ---------- Backup ----------
   const bsay = (msg, isErr) => { const s = $("#backup-status"); s.textContent = msg; s.classList.toggle("err", !!isErr); };
-  $("#export-btn").addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ app: "lift-tracker", exportedAt: new Date().toISOString(), ...snapshot() }, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `lift-tracker-backup-${todayKey()}.json`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    bsay(`Exported ${state.sets.length} entries and ${state.routines.length} ${state.routines.length === 1 ? "routine" : "routines"}.`);
+  // The backup file: same format as always ({ app, exportedAt, ...the stored log }).
+  function buildBackup() {
+    const exportedAt = new Date().toISOString();
+    const data = { app: "lift-tracker", exportedAt, ...snapshot() };
+    data.app = "lift-tracker"; data.exportedAt = exportedAt;
+    const text = JSON.stringify(data, null, 2);
+    return { filename: `lift-tracker-backup-${todayKey()}.json`, text, blob: new Blob([text], { type: "application/json" }) };
+  }
+  function markExported() { prefs.lastExportAt = Date.now(); savePrefs(); try { showBackupLine(); } catch (_) {} }
+  // When the last export was, and how many sets were logged after it (all of them if there was none).
+  function backupInfo() {
+    const lastAt = Number.isFinite(prefs.lastExportAt) ? prefs.lastExportAt : null;
+    const m = setIndex().memo;
+    if (m.sinceFor !== lastAt || m.since === undefined) {
+      let n = 0;
+      for (const s of state.sets) if (lastAt === null || (Number(s.createdAt) || 0) > lastAt) n += Number(s.sets) || 1;
+      m.since = n; m.sinceFor = lastAt;
+    }
+    return { lastAt, setsSince: m.since };
+  }
+  function showBackupLine() {
+    const el = $("#backup-last"); if (!el) return;
+    const { lastAt, setsSince: n } = backupInfo(), sets = `${n} ${n === 1 ? "set" : "sets"}`;
+    if (lastAt === null) { el.textContent = n ? `No backup yet. ${sets} ${n === 1 ? "is" : "are"} only on this phone.` : ""; return; }
+    const d = new Date(lastAt), now = new Date();
+    const when = toKey(d) === todayKey() ? "today" : `${d.getDate()} ${MON[d.getMonth()]}${d.getFullYear() !== now.getFullYear() ? ` ${d.getFullYear()}` : ""}`;
+    el.textContent = `Last backup ${when}. ${n ? `${sets} since.` : "Nothing new since."}`;
+  }
+  // At most one reminder every 14 days, once 30 or more sets aren't in any backup.
+  function backupNudge() {
+    const { lastAt, setsSince: n } = backupInfo();
+    if (n < 30 || readOnly) return;
+    if (Number.isFinite(prefs.backupNudgeAt) && Date.now() - prefs.backupNudgeAt < 14 * DAY) return;
+    prefs.backupNudgeAt = Date.now(); savePrefs();
+    toast(lastAt === null ? `${n} sets and no backup yet.` : `${n} sets since your last backup.`, { ms: 0, action: { label: "Back up", fn: () => {
+      setTab("history"); $("#export-btn").scrollIntoView({ block: "center" });
+    } } });
+  }
+  // Runs once at boot, right after load().
+  function bootStorage() {
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (_) {}
+    for (const step of [showRecovery, showBackupLine, backupNudge]) { try { step(); } catch (_) {} }
+  }
+
+  const importError = (code) => { const e = new Error(code); e.name = "ImportError"; e.code = code; return e; };
+  // Merges a backup file into the log, all or nothing. Returns counts; throws importError("not-json"),
+  // importError("not-backup"), or the storage error from save() (and then the log is exactly as it was).
+  function importBackup(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (_) { throw importError("not-json"); }
+    if (!isObj(data) || !Array.isArray(data.sets) || (data.app !== undefined && data.app !== "lift-tracker")) throw importError("not-backup");
+
+    // Sets: skip ids the log already has. Sets without an id are matched on their content instead; the file's
+    // n-th copy of an entry is skipped when the log already holds n copies, so importing twice adds nothing.
+    const sig = (s) => JSON.stringify([s.exercise, s.date, s.weightKg, s.reps, s.sets === undefined ? null : s.sets, s.createdAt === undefined ? null : s.createdAt]);
+    const haveIds = new Set(state.sets.map((s) => s.id)), haveSig = new Map(), fileSig = new Map();
+    for (const s of state.sets) { const k = sig(s); haveSig.set(k, (haveSig.get(k) || 0) + 1); }
+    const incoming = [];
+    let skipped = 0, bad = 0;
+    for (const raw of data.sets) {
+      const s = repairSet(raw);
+      if (!s) { bad++; continue; }
+      const id = typeof s.id === "number" && Number.isFinite(s.id) ? String(s.id) : s.id;
+      if (typeof id === "string" && id) {
+        if (haveIds.has(id)) { skipped++; continue; }
+        haveIds.add(id); incoming.push(id === s.id ? s : { ...s, id });
+      } else {
+        const k = sig(s), n = (fileSig.get(k) || 0) + 1;
+        fileSig.set(k, n);
+        if (n <= (haveSig.get(k) || 0)) { skipped++; continue; }
+        incoming.push({ ...s, id: newId() });
+      }
+    }
+    const fileEx = Array.isArray(data.exercises) ? data.exercises.filter(validEx) : [];
+    const names = new Set(state.customEx.map((x) => x.name)), exs = [];
+    for (const x of fileEx) if (!names.has(x.name)) { names.add(x.name); exs.push(x); }
+    // Keep bodyweight flags from the backup for lifts you already have.
+    const bwNames = new Set(fileEx.filter((x) => x.bodyweight).map((x) => x.name));
+    const rids = new Set(state.routines.map((r) => r.id)), rts = [];
+    for (const r of cleanRoutines(data.routines)) if (!rids.has(r.id)) { rids.add(r.id); rts.push(r); }
+    const days = new Set(state.body.map((b) => b.date)), body = [];
+    for (const b of cleanBody(data.bodyweight)) if (!days.has(b.date)) { days.add(b.date); body.push(b); }
+
+    const next = {
+      sets: incoming.length ? [...state.sets, ...incoming] : state.sets,
+      customEx: [...state.customEx, ...exs].map((x) => (bwNames.has(x.name) && !x.bodyweight ? { ...x, bodyweight: true } : x)),
+      routines: rts.length ? [...state.routines, ...rts] : state.routines,
+      hidden: cleanHidden([...state.hidden, ...cleanHidden(data.hidden)]),
+      body: body.length ? [...state.body, ...body] : state.body,
+    };
+    const before = { sets: state.sets, customEx: state.customEx, routines: state.routines, hidden: state.hidden, body: state.body };
+    copyPrev(true);
+    Object.assign(state, next);
+    try { save(); } catch (e) { Object.assign(state, before); throw e; }
+    return { added: incoming.length, skipped, bad, routines: rts.length };
+  }
+
+  $("#export-btn").addEventListener("click", async () => {
+    const b = buildBackup();
+    const done = () => { markExported(); bsay(`Exported ${state.sets.length} entries and ${state.routines.length} ${state.routines.length === 1 ? "routine" : "routines"}.`); };
+    // Phone shell: on a phone that can share this file (iOS: Save to Files, Drive, mail), the share sheet opens.
+    // Elsewhere (and wherever .json can't be shared, e.g. Chrome on Android) it downloads as before.
+    const file = shareableBackup(b);
+    if (file) {
+      try { await navigator.share({ files: [file], title: "Lift Tracker backup" }); return done(); } catch (e) {
+        // Cancelled: nothing was saved anywhere, so the backup time stays as it was.
+        if (e && e.name === "AbortError") return bsay("Backup not saved. Export again and pick where to keep it.");
+      }
+    }
+    downloadText(b.filename, b.blob);
+    done();
   });
   $("#import-btn").addEventListener("click", () => $("#import-file").click());
   $("#import-file").addEventListener("change", async (e) => {
     const file = e.target.files[0]; e.target.value = "";
     if (!file) return;
-    try {
-      const data = JSON.parse(await file.text());
-      if (!data || !Array.isArray(data.sets)) throw new Error("bad file");
-      const have = new Set(state.sets.map((s) => s.id));
-      const incoming = data.sets.filter(validSet).map((s) => ({ ...s, id: s.id || newId() })).filter((s) => !have.has(s.id));
-      const names = new Set(state.customEx.map((x) => x.name));
-      const exs = (data.exercises || []).filter((x) => x && x.name && !names.has(x.name));
-      const rids = new Set(state.routines.map((r) => r.id));
-      const rts = cleanRoutines(data.routines).filter((r) => !rids.has(r.id));
-      state.sets = [...state.sets, ...incoming];
-      state.customEx = [...state.customEx, ...exs];
-      state.routines = [...state.routines, ...rts];
-      // Keep bodyweight flags from the backup for lifts you already have.
-      const bwNames = new Set((data.exercises || []).filter((x) => x && x.bodyweight).map((x) => x.name));
-      state.customEx = state.customEx.map((x) => (bwNames.has(x.name) ? { ...x, bodyweight: true } : x));
-      state.hidden = cleanHidden([...state.hidden, ...cleanHidden(data.hidden)]);
-      const days = new Set(state.body.map((b) => b.date));
-      state.body = [...state.body, ...cleanBody(data.bodyweight).filter((b) => !days.has(b.date))];
-      save();
-      prefs.seenBadges = earnedIds(stats()); savePrefs();
-      render();
-      bsay(`Imported ${incoming.length} new ${incoming.length === 1 ? "entry" : "entries"}${rts.length ? ` and ${rts.length} ${rts.length === 1 ? "routine" : "routines"}` : ""}. Anything already in your log was skipped.`);
-    } catch (err) {
-      bsay(err && err.name === "QuotaExceededError" ? errText(err) : "That file isn't a Lift Tracker backup. Pick a file made with Export backup.", true);
+    let text, r;
+    try { text = await file.text(); } catch (_) { return bsay("Couldn't open that file. Try picking it again.", true); }
+    try { r = importBackup(text); } catch (err) {
+      return bsay(err && err.code === "not-json" ? "That file can't be read. Pick the .json file made with Export backup."
+        : err && err.code === "not-backup" ? "That file isn't a Lift Tracker backup. Pick a file made with Export backup."
+        : `Nothing was imported. ${errText(err)}`, true);
     }
+    prefs.seenBadges = earnedIds(stats()); savePrefs();
+    render();
+    bsay(`Imported ${r.added} new ${r.added === 1 ? "entry" : "entries"}${r.routines ? ` and ${r.routines} ${r.routines === 1 ? "routine" : "routines"}` : ""}. `
+      + `Skipped ${r.skipped} already in your log${r.bad ? ` and ${r.bad} that couldn't be read` : ""}.`);
   });
 
   let rz = null;
   new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(() => { if (!$("#tab-progress").hidden) renderChart(weeksFor(chartEx())); }, 120); }).observe($("#chart"));
 
+  // ---------- Phone shell: install, update, share, keyboard ----------
+  // Install row: once 3 sets are logged, at the top of Log, until installed or "Not now" (then quiet for 30 days).
+  // It is only checked at boot, when the browser offers the install, and when the app comes back to the
+  // foreground, never in the middle of logging, so it can't push the form down while a thumb is on it.
+  const INSTALL_QUIET = 30 * DAY;
+  let installEvt = null;
+  const standaloneMQ = matchMedia("(display-mode: standalone)");
+  const isInstalled = () => standaloneMQ.matches || navigator.standalone === true;
+  // iPhone and iPad (iPadOS reports itself as a Mac with touch). Safari there has no install prompt to call.
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  function showInstall() {
+    const row = $("#install-row");
+    const quiet = Number.isFinite(prefs.installDismissedAt) && Date.now() - prefs.installDismissedAt < INSTALL_QUIET;
+    const want = !!(installEvt || isIOS) && !isInstalled() && !quiet && setCount(state.sets) >= 3;
+    if (want) {
+      $("#install-text").textContent = installEvt ? "Install Lift Tracker. It opens like an app and works with no signal."
+        : "To install: tap Share, then Add to Home Screen.";
+      $("#install-yes").hidden = !installEvt;
+    }
+    if (want === !row.hidden) return;
+    // Shown while scrolled down: scroll by the row's height so nothing on screen moves.
+    const keep = want && !$("#tab-log").hidden && scrollY > 0, h0 = keep ? document.documentElement.scrollHeight : 0;
+    row.hidden = !want;
+    if (keep) scrollBy(0, document.documentElement.scrollHeight - h0);
+  }
+  function dismissInstall() { prefs.installDismissedAt = Date.now(); savePrefs(); showInstall(); }
+  addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; showInstall(); });
+  addEventListener("appinstalled", () => { installEvt = null; showInstall(); });
+  if (standaloneMQ.addEventListener) standaloneMQ.addEventListener("change", showInstall);
+  $("#install-no").addEventListener("click", dismissInstall);
+  $("#install-yes").addEventListener("click", async () => {
+    const ev = installEvt;
+    if (!ev) return showInstall();
+    installEvt = null;   // a prompt can only be shown once
+    try {
+      await ev.prompt();
+      const choice = await ev.userChoice;
+      if (choice && choice.outcome === "dismissed") return dismissInstall();
+    } catch (_) {}
+    showInstall();
+  });
+
+  // Backup through the share sheet. Only on a touch phone (a desktop gets the download it expects) and only when
+  // the browser accepts this exact file: several refuse .json, and then the download is the right result.
+  function shareableBackup(b) {
+    try {
+      if (!navigator.share || !navigator.canShare || !matchMedia("(pointer: coarse)").matches) return null;
+      const file = new File([b.blob], b.filename, { type: "application/json" });
+      return navigator.canShare({ files: [file] }) ? file : null;
+    } catch (_) { return null; }
+  }
+
+  // Share Lift Tracker: the app's address only, never any data. Copies the link where there's no share sheet.
+  const appUrl = new URL("./", location.href).href;
+  const canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
+  $("#share-sec").hidden = !navigator.share && !canCopy;
+  $("#share-app").addEventListener("click", async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: "Lift Tracker", text: "An offline lifting log: kg, reps, and beat last time.", url: appUrl }); return; } catch (e) {
+        if ((e && e.name === "AbortError") || !canCopy) return;
+      }
+    }
+    try { await navigator.clipboard.writeText(appUrl); toast("Link copied."); } catch (_) { toast("Couldn't copy the link."); }
+  });
+
+  // Keyboard: the visual viewport shrinks (or is pushed up) by the on-screen keyboard. Its height over the page
+  // becomes --kb and html.kb-open, so the CSS can stand Log set on top of the keyboard and hide the tab bar.
+  // It only opens while a text field has focus, and stays until the keyboard has gone, so it closes with it.
+  const vv = window.visualViewport;
+  const root = document.documentElement;
+  const typing = (el) => !!el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && !/^(checkbox|radio|file|button|submit|reset|range|color|date|hidden)$/i.test(el.type)));
+  let kbOpen = false, kbFrame = 0, tallest = innerHeight, wide = innerWidth;
+  function kbMeasure() {
+    if (!vv || vv.scale > 1.05) return -1;   // zoomed in: the visual viewport is small for another reason
+    // Browsers that shrink the whole page for the keyboard instead: compare with the tallest it has been.
+    if (innerWidth !== wide) { wide = innerWidth; tallest = innerHeight; }
+    if (!typing(document.activeElement)) tallest = Math.max(tallest, innerHeight);
+    const over = Math.round(innerHeight - vv.height - vv.offsetTop);
+    return over > 120 ? over : tallest - innerHeight > 120 ? 0 : -1;
+  }
+  function kbSync(reveal) {
+    kbFrame = 0;
+    const kb = kbMeasure();
+    const open = kb >= 0 && (kbOpen || typing(document.activeElement));
+    if (open) root.style.setProperty("--kb", kb + "px");
+    if (open !== kbOpen) {
+      kbOpen = open;
+      root.classList.toggle("kb-open", open);
+      if (!open) root.style.removeProperty("--kb");
+      else reveal = true;
+    }
+    if (open && reveal) keepFieldClear();
+  }
+  // The weight or reps field being typed into stays visible above Log set.
+  function keepFieldClear() {
+    const el = document.activeElement;
+    if (!el || !el.closest || !el.closest("#log-form") || $("#tab-log").hidden) return;
+    const r = el.getBoundingClientRect(), bar = document.querySelector(".logbar").getBoundingClientRect();
+    const top = vv ? vv.offsetTop : 0;
+    if (r.bottom > bar.top - 8) scrollBy(0, r.bottom - bar.top + 8);
+    else if (r.top < top + 8) scrollBy(0, r.top - top - 8);
+  }
+  const kbQueue = () => { if (!kbFrame) kbFrame = requestAnimationFrame(() => kbSync(false)); };
+  if (vv) { vv.addEventListener("resize", kbQueue); vv.addEventListener("scroll", kbQueue); }
+  addEventListener("resize", kbQueue);
+  document.addEventListener("focusin", () => { cancelAnimationFrame(kbFrame); kbFrame = requestAnimationFrame(() => kbSync(true)); });
+  document.addEventListener("focusout", kbQueue);
+
+  // Enter on kg moves to reps; Enter on reps logs the set (the form's own submit) and puts the keyboard away.
+  $("#weight").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    const reps = $("#reps"); reps.focus();
+    try { reps.select(); } catch (_) {}
+  });
+  $("#reps").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.isComposing) return;
+    setTimeout(() => { if (!$("#status").classList.contains("err")) e.target.blur(); }, 0);
+  });
+  // A long press on a stepper only repeats it; no context menu.
+  document.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("contextmenu", (e) => e.preventDefault()));
+
+  // Android Back closes the open sheet instead of leaving the app. Each open sheet owns one history entry
+  // ({ ltSheet: depth }); closing a sheet any other way takes its entry off again, so history never grows.
+  // openSheet is wrapped (it still does all the work); closeSheet and the dialogs' own close handling are untouched.
+  const sheetStack = [];   // open sheets, oldest first
+  let ownBack = 0;         // history steps this code started and whose popstate hasn't arrived yet
+  const sheetDepth = () => (history.state && Number(history.state.ltSheet)) || 0;
+  function syncSheetHistory() {
+    if (ownBack) return;   // wait until our own step back has landed
+    const depth = sheetDepth();
+    try {
+      if (depth > sheetStack.length) { ownBack++; history.go(sheetStack.length - depth); return; }
+      for (let d = depth; d < sheetStack.length; d++) history.pushState({ ltSheet: d + 1 }, "");
+    } catch (_) { ownBack = 0; }
+  }
+  const baseOpenSheet = openSheet;
+  openSheet = (dlg) => {
+    baseOpenSheet(dlg);
+    if (dlg.open && !sheetStack.includes(dlg)) { sheetStack.push(dlg); syncSheetHistory(); }
+  };
+  for (const dlg of document.querySelectorAll("dialog")) {
+    dlg.addEventListener("close", () => {
+      const i = sheetStack.indexOf(dlg);
+      if (i >= 0) { sheetStack.splice(i, 1); syncSheetHistory(); }
+    });
+  }
+  addEventListener("popstate", () => {
+    if (ownBack) { ownBack--; syncSheetHistory(); return; }
+    // Back (or a swipe back): close every sheet that no longer has its entry, newest first.
+    const depth = sheetDepth();
+    for (const dlg of sheetStack.splice(depth).reverse()) closeSheet(dlg);
+  });
+
+  // Updates: a new version installs in the background and waits. Nothing changes under a workout; a sticky
+  // notice offers Refresh, and only that tap swaps the app over and reloads (once). If it's never tapped, the
+  // new version takes over the next time the app is opened from closed.
+  let swReg = null, updateToast = null, swapping = false, lastUpdateCheck = Date.now();
+  function offerUpdate() {
+    if (!swReg || !swReg.waiting || !navigator.serviceWorker.controller || (updateToast && updateToast.isConnected)) return;
+    updateToast = toast("New version ready.", { ms: 0, action: { label: "Refresh", fn: () => {
+      const w = swReg.waiting;
+      swapping = true;
+      if (!w) return location.reload();          // already active (another window took it): just reload
+      w.postMessage({ type: "SKIP_WAITING" });
+      setTimeout(() => location.reload(), 4000);  // in case the swap is never reported
+    } } });
+  }
+  function startServiceWorker() {
+    const sw = navigator.serviceWorker, hadController = !!sw.controller;
+    let reloaded = false;
+    sw.addEventListener("controllerchange", () => {
+      // First install takes control silently. A swap this page asked for reloads it, once.
+      if (!hadController || reloaded) return;
+      if (swapping) { reloaded = true; location.reload(); return; }
+      // Another window tapped Refresh: this page keeps running as it is and offers the reload itself.
+      if (!(updateToast && updateToast.isConnected)) updateToast = toast("New version ready.", { ms: 0, action: { label: "Refresh", fn: () => { reloaded = true; location.reload(); } } });
+    });
+    sw.register("sw.js").then((reg) => {
+      swReg = reg;
+      offerUpdate();   // a version that was already waiting when the app opened
+      reg.addEventListener("updatefound", () => {
+        const w = reg.installing;
+        if (w) w.addEventListener("statechange", () => { if (w.state === "installed") offerUpdate(); });
+      });
+    }).catch(() => {});
+    // Back in the foreground: look for a new version, at most once an hour and only with a connection.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || !swReg || navigator.onLine === false) return;
+      if (Date.now() - lastUpdateCheck < 3600000) return;
+      lastUpdateCheck = Date.now();
+      try { swReg.update().catch(() => {}); } catch (_) {}
+    });
+  }
+  // Runs once at boot, after the log is loaded.
+  function bootShell() {
+    if (sheetDepth()) try { history.replaceState(null, ""); } catch (_) {}   // reloaded with a sheet's entry current
+    showInstall();
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") showInstall(); });
+    if ("serviceWorker" in navigator) startServiceWorker();
+  }
+
   // ---------- Boot ----------
   const now = new Date();
   $("#today-label").textContent = `${WD[now.getDay()]} ${now.getDate()} ${MON[now.getMonth()]}`;
   $("#date").value = todayKey();
-  load();
+  load(); bootStorage();
   // First open of this version: count milestones already earned as seen, so they don't all pop at once.
   if (!Array.isArray(prefs.seenBadges)) { prefs.seenBadges = earnedIds(stats()); savePrefs(); }
   render();
@@ -1707,13 +2581,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .65); }
   addEventListener("load", revealChip);
   if (document.fonts) document.fonts.ready.then(revealChip);
 
-  if ("serviceWorker" in navigator) {
-    const hadController = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (hadController) toast("New version ready.", { ms: 0, action: { label: "Refresh", fn: () => location.reload() } });
-    });
-    navigator.serviceWorker.register("sw.js").catch(() => {});
-  }
+  // Install row, update check, service worker (see Phone shell).
+  bootShell();
 })();
 </script>
 </body>

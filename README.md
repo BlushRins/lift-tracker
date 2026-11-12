@@ -11,10 +11,11 @@ An offline lifting log. Log each set's weight (kg) and reps; your best set is th
 - Edit lifts: rename (history and routines follow), mark as bodyweight, hide (history stays), or delete an unused lift.
 - Body weight: a weekly weigh-in on Progress with a simple trend line.
 - History tab: training calendar (tap a day to jump to it), days grouped by lift, Edit, Delete with Undo, backup export/import (includes routines).
-- Data is stored on the device only (localStorage). Use **Export backup** to keep a copy.
+- Data is stored on the device only (localStorage). Use **Export backup** to keep a copy; on an iPhone it opens the share sheet (Save to Files, Drive, mail), elsewhere it downloads the .json file. The Backup section says when the last backup was, and a damaged saved log is kept aside instead of being overwritten.
+- v8, phone shell: after 3 logged sets a one-line **Install** row appears on Log (on iPhone: Share, then Add to Home Screen); "Not now" hides it for 30 days. Updates download in the background and wait: **New version ready. Refresh** swaps over only when tapped, or by itself the next time the app is opened from closed. With the keyboard up, Log set sits right above it and the tab bar steps aside; Enter on kg goes to reps, Enter on reps logs the set. The phone's Back button closes an open sheet instead of leaving the app. **Share Lift Tracker** at the bottom of History sends the app's address, never your data.
 
 Design rules ("gym floor"): flat, near-black, rules instead of nested cards, Barlow Condensed numbers. Yellow `#FFC400` is only ever a fill with black text on it, never a text colour.
 
 Live: https://blushrins.github.io/lift-tracker/
 
-When changing any app file, bump `VERSION` in `sw.js` so installed copies pick up the update.
+When changing any app file, bump `VERSION` in `sw.js` (once per release) so installed copies pick up the update. Installed copies show "New version ready." and switch over on Refresh, or the next time the app is opened from closed. Never add a manifest `id` or change `start_url` / `scope`: that would turn every existing install into a second app.

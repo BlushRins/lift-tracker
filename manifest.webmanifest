@@ -2,6 +2,8 @@
   "name": "Lift Tracker",
   "short_name": "Lifts",
   "description": "Log lifts in kg, beat last time, and see week-over-week strength gains. Works offline.",
+  "lang": "en",
+  "categories": ["health", "fitness"],
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,10 +1,17 @@
 // Offline cache for Lift Tracker. Bump VERSION when any app file changes.
-const VERSION = "lift-tracker-v7";
+const VERSION = "lift-tracker-v8";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 const FONTS = "lift-tracker-fonts";
 
+// Install: every shell file comes from the network (cache: "reload"), never from the browser's HTTP cache, so a
+// new version can't be stored with an old index.html. addAll is all or nothing. No skipWaiting() here: a new
+// version waits until the page asks for it (Refresh on "New version ready.") or the app is next opened from closed.
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: "reload" })))));
+});
+
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
