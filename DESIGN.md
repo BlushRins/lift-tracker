@@ -2,37 +2,39 @@
 # gstack: design-md-format=spec
 name: Lift Tracker
 description: A gym-floor log for one-handed use between sets; near-black, flat and loud only where it counts.
+# Token names match the CSS custom properties in index.html (yellow = --yellow, fs-md = --fs-md, sp-12 = --sp-12).
 colors:
-  primary: "#FFC400"
-  on-primary: "#111111"
-  primary-pressed: "#E0AC00"
-  surface: "#0E0E0E"
-  surface-raised: "#171717"
+  yellow: "#FFC400"
+  on-yellow: "#111111"
+  yellow-press: "#E0AC00"
+  bg: "#0E0E0E"
+  raised: "#171717"
   rule: "#2A2A2A"
   rule-strong: "#3D3D3A"
-  text: "#F2F2EE"
-  text-muted: "#8C8C86"
-  success: "#2BD47D"
-  error: "#FF5A4E"
-  surface-light: "#F3F2EE"
-  surface-raised-light: "#E8E6E0"
+  ink: "#F2F2EE"
+  muted: "#8C8C86"
+  up: "#2BD47D"
+  down: "#FF5A4E"
+  bg-light: "#F3F2EE"
+  raised-light: "#E8E6E0"
   rule-light: "#D6D3CB"
   rule-strong-light: "#B9B6AD"
-  text-light: "#111111"
-  text-muted-light: "#5C5C57"
-  success-light: "#0A7A3E"
-  error-light: "#B3261E"
-  plate-25kg: "#D7262E"
-  plate-20kg: "#2563D9"
-  plate-15kg: "#FFC400"
-  plate-10kg: "#1E9E4A"
-  plate-5kg: "#F2F2EE"
-  plate-small: "#6E6E6A"
+  ink-light: "#111111"
+  muted-light: "#5C5C57"
+  up-light: "#0A7A3E"
+  down-light: "#B3261E"
+  p25: "#D7262E"
+  p20: "#2563D9"
+  p15: "#FFC400"
+  p10: "#1E9E4A"
+  p5: "#F2F2EE"
+  p5-light: "#FFFFFF"
+  psm: "#6E6E6A"
+  psm-light: "#9A9890"
 typography:
   display:
     fontFamily: Barlow Condensed
     fontWeight: 700
-    fontSize: 3.6rem
     letterSpacing: 0.01em
   body:
     fontFamily: Barlow
@@ -45,27 +47,60 @@ typography:
   mono:
     fontFamily: Barlow Condensed
     fontFeature: tnum
+  fs-2xs:
+    fontSize: 0.75rem
+  fs-xs:
+    fontSize: 0.82rem
+  fs-sm:
+    fontSize: 0.9rem
+  fs-ui:
+    fontSize: 0.95rem
+  fs-body:
+    fontSize: 1rem
+  fs-md:
+    fontSize: 1.1rem
+  fs-lg:
+    fontSize: 1.25rem
+  fs-xl:
+    fontSize: 1.4rem
+  fs-2xl:
+    fontSize: 1.6rem
+  fs-3xl:
+    fontSize: 2rem
+  fs-4xl:
+    fontSize: 2.2rem
+  fs-num:
+    fontSize: 3.6rem
+  fs-hero:
+    fontSize: clamp(4rem, 22vw, 6rem)
 rounded:
   sm: 2px
   md: 4px
   phone: 20px
 spacing:
-  xs: 4px
-  sm: 8px
-  md: 16px
-  lg: 24px
-  xl: 32px
-  2xl: 48px
+  sp-4: 4px
+  sp-6: 6px
+  sp-8: 8px
+  sp-10: 10px
+  sp-12: 12px
+  sp-14: 14px
+  sp-16: 16px
+  sp-20: 20px
+  sp-24: 24px
+  sp-32: 32px
+  sp-48: 48px
+  sp-64: 64px
+  sp-96: 96px
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.yellow}"
+    textColor: "{colors.on-yellow}"
     rounded: "{rounded.sm}"
   button-primary-pressed:
-    backgroundColor: "{colors.primary-pressed}"
+    backgroundColor: "{colors.yellow-press}"
   button:
-    backgroundColor: "{colors.surface-raised}"
-    textColor: "{colors.text}"
+    backgroundColor: "{colors.raised}"
+    textColor: "{colors.ink}"
     borderColor: "{colors.rule-strong}"
     rounded: "{rounded.sm}"
   input:
@@ -88,7 +123,7 @@ components:
 
 ## Colors
 
-**Strategy:** Restrained. Neutrals carry the whole screen; the yellow appears as a fill on the primary action, PR marks and trained calendar days, always with `on-primary` text on it. Success and error are only for the up and down change markers and destructive links.
+**Strategy:** Restrained. Neutrals carry the whole screen; the yellow appears as a fill on the primary action, PR marks and trained calendar days, always with `on-yellow` text on it. `up` and `down` (green and red) are only for the change markers and destructive links.
 **Light or dark:** dark by default, because the app is read under gym lighting and between sets; the light set applies when the phone is in light mode (`prefers-color-scheme`). Light surfaces keep the same hierarchy: raised is darker than the page, rules get stronger, muted text stays above 4.5:1 on both page and raised surfaces.
 The plate colours are the standard bumper-plate colours and appear only in the plate calculator.
 
@@ -96,7 +131,11 @@ The plate colours are the standard bumper-plate colours and appear only in the p
 
 Barlow Condensed is the display and numeral face (headings in uppercase, weight and reps in tabular figures); Barlow is the reading face. Both load from Google Fonts with metric-matched local fallbacks, so the large numerals don't jump when the web font arrives or is missing offline. Body text never goes below 16px. Labels are small condensed uppercase with a little tracking.
 
+Every font size in the app is a step of the `fs-*` scale; sizes in `em` (the unit after a number, the PR mark) are proportions of their parent and stay as they are. `fs-num` is the weight and reps readout, `fs-hero` the strength-gained number. The landing page uses its own larger display sizes (48 to 112px) for headlines.
+
 ## Layout
+
+Padding, margins and gaps use the `sp-*` steps: the app uses 4 to 24, the landing page 4 to 96. Values of 1 to 3px are optical nudges (hairline offsets, badge padding) and stay literal, and negative margins stay literal because each one cancels a neighbouring size.
 
 Single column on the phone with a 16px gutter and a sticky Log set bar above the tab bar. Sections are separated by hairline rules and a 3px ink rule on the landing page; nothing is nested in a bordered box inside another bordered box. The landing page widens to a 1200px max with the hero text beside one phone screenshot from 1024px.
 
@@ -110,7 +149,7 @@ Controls use a 2px radius in the app (4px on the landing page's larger buttons).
 
 ## Components
 
-- **Primary button:** yellow fill, black condensed uppercase label, pressed state darkens to `primary-pressed`; never yellow text on a dark ground.
+- **Primary button:** yellow fill, black condensed uppercase label, pressed state darkens to `yellow-press`; never yellow text on a dark ground.
 - **Buttons, chips, steppers:** raised fill with a strong rule; every tappable thing is at least 44 x 44px; `:focus-visible` is a clear ink outline.
 - **Steppers:** repeat while held; floors at 0 kg and 1 rep.
 - **Toasts and sheets:** enter and leave with short motion; sticky toasts carry an action.
@@ -141,3 +180,4 @@ Controls use a 2px radius in the app (4px on the landing page's larger buttons).
 | 2026-10-30 | No volume totals, then no e1RM | The owner found both confusing; PR is the heaviest weight |
 | 2026-11-12 | v8 polish: press states, 44px targets, short motion | Feel finished without changing the look |
 | 2026-11-12 | Landing page as about.html, written down here | Created by /design-html from the app's own tokens |
+| 2026-11-15 | Token names match the CSS; `fs-*` type scale and `sp-*` spacing added | Design-system audit: 33 font sizes and 18 spacing values collapsed to 13 and 9 steps with no layout change |
