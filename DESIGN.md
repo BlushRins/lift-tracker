@@ -181,3 +181,4 @@ Controls use a 2px radius in the app (4px on the landing page's larger buttons).
 | 2026-11-12 | v8 polish: press states, 44px targets, short motion | Feel finished without changing the look |
 | 2026-11-12 | Landing page as about.html, written down here | Created by /design-html from the app's own tokens |
 | 2026-11-15 | Token names match the CSS; `fs-*` type scale and `sp-*` spacing added | Design-system audit: 33 font sizes and 18 spacing values collapsed to 13 and 9 steps with no layout change |
+| 2026-11-16 | v10: rest timer inside the Log set button, per-lift weight step and rest, screen kept on during a workout | The timer lives in the button so nothing moves under the thumb; no new colours or motion |
