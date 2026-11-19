@@ -128,6 +128,8 @@ button.link:active { transform: none; background: none; opacity: 0.6; }
 button.link.danger { color: var(--color-error); }
 .lbl-row > .link, .sec-head > .link { margin-block: calc(-1 * var(--space-sm)); margin-right: calc(-1 * var(--space-xs)); }
 input { width: 100%; min-width: 0; min-height: 44px; padding: 0 var(--space-sm); border: var(--rule-hair) solid var(--color-muted); border-radius: var(--radius-pill); background: var(--color-paper-2); color: var(--color-ink); font-family: var(--font-body); font-size: var(--text-md); }
+#note-input { width: 100%; min-height: 88px; padding: var(--space-sm); border: var(--rule-hair) solid var(--color-muted); border-radius: var(--radius-pill); background: var(--color-paper-2); color: var(--color-ink); resize: vertical; }
+#note-input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -1px; }
 input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -1px; }
 input:disabled { opacity: 0.55; cursor: not-allowed; }
 .field { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
@@ -352,6 +354,9 @@ dialog::backdrop { background: var(--color-scrim); }
 .sheet-btns .danger { margin-right: auto; }
 .sheet-btns .primary { min-height: 48px; font-size: var(--text-md); }
 .pick-list { display: flex; flex-direction: column; }
+#routine-targets fieldset { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); margin: var(--space-sm) 0; padding: var(--space-xs) 0; border: 0; border-top: var(--rule-hair) solid var(--color-rule); }
+#routine-targets legend { padding: 0 var(--space-xs) 0 0; font-weight: 500; }
+#routine-targets label { display: flex; flex-direction: column; gap: var(--space-3xs); min-width: 0; color: var(--color-muted); font-size: var(--text-sm); }
 .lm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-xs); padding: var(--space-xs) 0; border-top: var(--rule-hair) solid var(--color-rule); }
 .lm-row.hidden-lift input.lm-name { color: var(--color-muted); }
 .bw-toggle { display: flex; align-items: center; gap: var(--space-xs); min-height: 44px; min-width: 44px; color: var(--color-muted); font-size: var(--text-sm); font-weight: 500; cursor: pointer; }
@@ -497,10 +502,19 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       </div>
 
       <div class="sec" id="beat"></div>
+      <div class="sec">
+        <div class="lbl-row"><span class="lbl">Lift note</span><button type="button" class="link small" id="note-edit">Add note</button></div>
+        <p class="small muted" id="note-text" hidden></p>
+      </div>
 
       <div class="sec">
+        <p class="small muted" id="routine-target-line" hidden></p>
         <p class="session" id="session-line" hidden></p>
         <div class="meta">
+        <div class="date-row">
+          <label class="bw-check"><input type="checkbox" id="warmup"> Warm-up set</label>
+          <span class="small muted">Not counted for progress or targets</span>
+        </div>
         <div class="date-row">
           <span class="lbl">Steps</span>
           <span id="liftset-text">2.5 kg, rest 2:00</span>
@@ -592,6 +606,15 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         <button type="button" id="import-btn">Import backup</button>
         <input type="file" id="import-file" accept="application/json,.json" hidden>
       </div>
+      <div id="import-preview" hidden aria-labelledby="import-preview-title">
+        <h3 id="import-preview-title">Review backup</h3>
+        <p id="import-preview-summary" class="small" role="status" aria-live="polite"></p>
+        <p class="small muted">Import merges with this phone's log. Existing matching entries are kept. Lift settings and hidden lifts may also be merged.</p>
+        <div class="backup-row">
+          <button type="button" id="import-confirm">Import backup</button>
+          <button type="button" id="import-cancel">Cancel</button>
+        </div>
+      </div>
       <p class="status" id="backup-status" role="status" aria-live="polite"></p>
     </div>
 
@@ -658,6 +681,16 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   </div>
 </dialog>
 
+<dialog id="note-sheet" aria-labelledby="note-heading">
+  <form class="sheet" id="note-form">
+    <h2 id="note-heading">Lift note</h2>
+    <div class="field"><label class="lbl" for="note-input">Technique or equipment reminder</label>
+      <textarea id="note-input" rows="3" maxlength="500"></textarea></div>
+    <p class="status err" id="note-status" role="status" aria-live="polite"></p>
+    <div class="sheet-btns"><button type="button" id="note-cancel">Cancel</button><button type="submit" class="primary">Save</button></div>
+  </form>
+</dialog>
+
 <dialog id="pick-sheet" class="pick-dialog" aria-label="Choose a lift">
   <div class="sheet">
     <div class="pk-top">
@@ -682,6 +715,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       <span class="lbl">Tap lifts in the order you do them</span>
       <input id="routine-filter" type="search" placeholder="Search your lifts" autocomplete="off" aria-label="Search your lifts">
       <div class="pick-list" id="routine-picks"></div>
+      <div id="routine-targets"></div>
       <div class="add-ex">
         <input id="routine-new" type="text" maxlength="40" placeholder="Another lift, e.g. RDL" aria-label="New lift name" list="lib-names">
         <button type="button" id="routine-new-btn">Add</button>
@@ -1050,13 +1084,14 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   // "200" for a barbell lift; "BW" or "BW +10" for a bodyweight lift.
   const wt = (ex, w) => (isBW(ex) || w === 0 ? (w > 0 ? `BW +${kgTrim(w)}` : "BW") : kgTrim(w));
   const wtKg = (ex, w) => (isBW(ex) || w === 0 ? `${wt(ex, w)}${w > 0 ? " kg" : ""}` : `${kgTrim(w)} kg`);
-  const lastSetOf = (ex) => { const l = setIndex().byEx.get(ex); return l ? l[l.length - 1] : null; };
+  const workingSets = (list) => list.filter((s) => s.warmup !== true);
+  const lastSetOf = (ex) => { const l = workingSets(setIndex().byEx.get(ex) || []); return l.length ? l[l.length - 1] : null; };
   const setsOn = (ex, date) => (setIndex().byDate.get(date) || []).filter((s) => s.exercise === ex);
   const setCount = (list) => list.reduce((n, s) => n + (s.sets || 1), 0);
 
   // The most recent session of a lift before `before`, and its best set.
   function lastSession(ex, before) {
-    const l = setIndex().byEx.get(ex) || [];
+    const l = workingSets(setIndex().byEx.get(ex) || []);
     let lo = 0, hi = l.length;                       // first index whose date is not before `before`
     while (lo < hi) { const mid = (lo + hi) >> 1; if (l[mid].date < before) lo = mid + 1; else hi = mid; }
     if (!lo) return null;
@@ -1076,7 +1111,11 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
 
   const activeRoutine = () => state.routines.find((r) => r.id === prefs.routineId) || null;
-  const doneToday = (ex) => setsOn(ex, formDate()).length > 0;
+  const routineTarget = (r, ex) => Array.isArray(r?.targets) ? r.targets.find((t) => t && t.lift === ex && Number.isInteger(t.sets) && t.sets > 0 && t.sets <= 100 && Number.isInteger(t.minReps) && t.minReps > 0 && t.minReps <= 1000 && Number.isInteger(t.maxReps) && t.maxReps >= t.minReps && t.maxReps <= 1000) : null;
+  const doneToday = (ex) => {
+    const count = setCount(workingSets(setsOn(ex, formDate()))), target = routineTarget(activeRoutine(), ex);
+    return count >= (target ? target.sets : 1);
+  };
   const nextLift = (r) => r.lifts.find((ex) => ex !== state.selected && !doneToday(ex)) || null;
 
   // Weeks are built from the lift's sets in stored order (ties keep the first stored), as before.
@@ -1086,6 +1125,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     if (weeks) return weeks;
     const map = new Map();
     for (const s of ix.inOrder.get(ex) || []) {
+      if (s.warmup === true) continue;
       const key = weekKeyOf(s.date);
       let w = map.get(key);
       if (!w) { w = { key, start: parse(key), top: s }; map.set(key, w); }
@@ -1114,6 +1154,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     if (!m.prs) {
       const ids = new Set(), best = new Map();
       for (const s of setIndex().sorted) {
+        if (s.warmup === true) continue;
         const top = best.get(s.exercise);
         if (top && heavier(s, top)) ids.add(s.id);
         if (!top || heavier(s, top)) best.set(s.exercise, s);
@@ -1126,7 +1167,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   function streakData() {
     const m = setIndex().memo, today = todayKey();
     if (!m.streak || m.streakDay !== today) {
-      const weeks = new Set(state.sets.map((s) => weekKeyOf(s.date)));
+      const weeks = new Set(workingSets(state.sets).map((s) => weekKeyOf(s.date)));
       const back = (d) => { const x = new Date(d); x.setDate(x.getDate() - 7); return x; };
       let cur = 0, d = weekStart(today);
       if (!weeks.has(toKey(d))) d = back(d);
@@ -1150,6 +1191,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       const liftsByWeek = new Map(), bestEver = new Map();
       let maxWeight = 0;
       for (const s of state.sets) {
+        if (s.warmup === true) continue;
         const wk = weekKeyOf(s.date);
         if (!liftsByWeek.has(wk)) liftsByWeek.set(wk, new Set());
         liftsByWeek.get(wk).add(s.exercise);
@@ -1166,7 +1208,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
 
   const BADGES = [
-    { id: "first", name: "First Rep", desc: "Log your first set", prog: (s) => [state.sets.length, 1] },
+    { id: "first", name: "First Rep", desc: "Log your first set", prog: (s) => [workingSets(state.sets).length, 1] },
     { id: "streak4", name: "4-Week Streak", desc: "Train 4 weeks in a row", prog: (s) => [s.longest, 4] },
     { id: "streak12", name: "12-Week Streak", desc: "Train 12 weeks in a row", prog: (s) => [s.longest, 12] },
     { id: "pr5", name: "PR Hunter", desc: "Set 5 PRs", prog: (s) => [s.prCount, 5] },
@@ -1386,6 +1428,9 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const pos = r ? r.lifts.indexOf(ex) : -1;
     setHTML($("#lift-name"), `<button type="button" class="lift-btn" id="lift-btn" aria-label="Change lift, now ${esc(ex)}"><span>${esc(ex)}</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${pos >= 0 ? `<span class="of">${pos + 1} of ${r.lifts.length}</span>` : ""}`);
     const done = setsOn(ex, d);
+    const target = routineTarget(r, ex), targetLine = $("#routine-target-line");
+    targetLine.hidden = !target;
+    if (target) targetLine.textContent = `${setCount(workingSets(done))} of ${target.sets} sets, ${target.minReps}–${target.maxReps} reps`;
     $("#submit-label").textContent = state.editingId ? "Save changes" : `Log set ${setCount(done) + 1}`;
     // The weight steppers and the Steps row follow the selected lift's step and rest.
     const st = stepOf(ex), sl = kgTrim(st), rs = restOf(ex);
@@ -1398,10 +1443,15 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     $("#liftset-text").textContent = `${sl} kg, ${rs ? `rest ${mmss(rs)}` : "no rest timer"}`;
     $("#liftset-btn").setAttribute("aria-label", `Change weight step and rest timer for ${ex}`);
     showRest();
+    const note = typeof exEntry(ex)?.note === "string" ? exEntry(ex).note : "";
+    $("#note-text").textContent = note;
+    $("#note-text").hidden = !note;
+    $("#note-edit").textContent = note ? "Edit note" : "Add note";
+    $("#note-edit").setAttribute("aria-label", `${note ? "Edit" : "Add"} note for ${ex}`);
     const line = $("#session-line");
     line.hidden = !done.length;
     if (done.length) line.innerHTML = `${d === todayKey() ? "Today" : dayLabel(d)}: <b>${summary(done)}</b>`;
-    const next = r && !state.editingId && done.length ? nextLift(r) : null;
+    const next = r && !state.editingId && doneToday(ex) ? nextLift(r) : null;
     const nb = $("#next-btn");
     nb.hidden = !next;
     if (next) { nb.textContent = `Next: ${next} →`; nb.dataset.ex = next; }
@@ -1409,6 +1459,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
   function renderBeat() {
     const box = $("#beat");
+    if ($("#warmup").checked) {
+      setHTML(box, `<h2>Warm-up</h2><p class="muted">This set stays in your history and won't count toward progress or last time.</p>`);
+      return;
+    }
     const last = lastSession(state.selected, formDate());
     const w = parseFloat($("#weight").value), r = parseInt($("#reps").value, 10);
     const valid = w > 0 && r >= 1;
@@ -1451,7 +1505,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         n += k;
         return `<div class="set-row${s.id === state.editingId ? " editing" : ""}${fresh && s.id === fresh ? " new" : ""}">
           <span class="sn">${label}</span>
-          <span class="ld">${wt(s.exercise, s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}</span>
+          <span class="ld">${wt(s.exercise, s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${s.warmup === true ? `<small> Warm-up</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}</span>
           <span class="acts">
             <button type="button" class="link" data-edit="${esc(s.id)}" aria-label="Edit ${esc(ex)} set ${label}">Edit</button>
             <button type="button" class="link danger" data-del="${esc(s.id)}" aria-label="Delete ${esc(ex)} set ${label}">Delete</button>
@@ -1465,7 +1519,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   function renderToday(prs) {
     const list = setIndex().byDate.get(todayKey()) || [];
     const r = activeRoutine();
-    const routineDone = r && list.length && r.lifts.every((ex) => list.some((s) => s.exercise === ex));
+    const routineDone = r && list.length && r.lifts.every((ex) => {
+      const count = setCount(workingSets(list.filter((s) => s.exercise === ex))), target = routineTarget(r, ex);
+      return count >= (target ? target.sets : 1);
+    });
     $("#today-sum").textContent = routineDone ? `${r.name} done ✓`
       : list.length ? `${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"}` : "";
     const box = $("#today-list");
@@ -1509,7 +1566,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
   const chartEx = () => (state.chartEx && exerciseList().includes(state.chartEx) ? state.chartEx : state.selected);
 
-  const prOf = (ex) => bestSet(setsOf(ex));
+  const prOf = (ex) => bestSet(workingSets(setsOf(ex)));
   const allWeeks = () => exerciseList().map((ex) => ({ ex, weeks: weeksFor(ex) }));
   // Strength gained: kg added to the best set since the first week, over lifts logged in at least two weeks.
   const gainOf = (all) => all.filter((x) => x.weeks.length >= 2).reduce((t, x) => t + (prOf(x.ex).weightKg - x.weeks[0].best), 0);
@@ -1518,7 +1575,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const total = gainOf(all);
     $("#gain-num").dataset.v = total;
     paintGain(total);
-    if (!state.sets.length) $("#gain-sub").textContent = "Log your first set to set a baseline. Next week, add reps or weight and the gain shows here.";
+    if (!workingSets(state.sets).length) $("#gain-sub").textContent = "Log your first working set to set a baseline. Next week, add reps or weight and the gain shows here.";
     else if (!tracked.length) $("#gain-sub").textContent = "Baseline set. Log the same lift in a later week to see how much stronger you got.";
     else {
       const first = tracked.reduce((d, x) => (x.weeks[0].start < d ? x.weeks[0].start : d), tracked[0].weeks[0].start);
@@ -1819,7 +1876,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   function readForm() {
     const raw = parseFloat($("#weight").value);
     // A bodyweight lift with the weight left empty means no added weight.
-    return { exercise: state.selected, date: formDate(), weightKg: isBW(state.selected) && !Number.isFinite(raw) ? 0 : raw, reps: parseInt($("#reps").value, 10), sets: 1 };
+    return { exercise: state.selected, date: formDate(), weightKg: isBW(state.selected) && !Number.isFinite(raw) ? 0 : raw, reps: parseInt($("#reps").value, 10), sets: 1, warmup: $("#warmup").checked };
   }
   function celebrate(beforeSeen) {
     const earned = earnedIds(stats());
@@ -1829,8 +1886,8 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
   function logSet(f) {
     const btnTop = $("#submit-btn").getBoundingClientRect().top;
-    const prevTop = bestSet(setsOf(f.exercise));
-    const isPR = !!prevTop && heavier(f, prevTop);
+    const prevTop = bestSet(workingSets(setsOf(f.exercise)));
+    const isPR = !f.warmup && !!prevTop && heavier(f, prevTop);
     // Strength gained before this PR, for the count-up the next time Progress is shown.
     const gainBefore = isPR && pendingGain === null ? gainOf(allWeeks()) : null;
     const nth = setCount(setsOn(f.exercise, f.date)) + (f.sets || 1);   // read before the log changes
@@ -1849,7 +1906,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       toast(`<b>New PR:</b> ${esc(f.exercise)} ${wtKg(f.exercise, f.weightKg)} × ${f.reps}, ${why}`, { kind: "pr", ms: 4500 });
     } else {
       buzz(20);
-      toast(`Set ${nth} logged: <b>${wt(f.exercise, f.weightKg)} × ${f.reps}</b>`, { ms: 1800 });
+      toast(`${f.warmup ? "Warm-up" : `Set ${nth}`} logged: <b>${wt(f.exercise, f.weightKg)} × ${f.reps}</b>`, { ms: 1800 });
     }
     // Milestones need the full stats, so they are worked out in a task of their own after the set shows.
     setTimeout(() => { for (const b of celebrate(prefs.seenBadges || [])) toast(`<b>Milestone:</b> ${b.name}`, { ms: 5000 }); }, 0);
@@ -1922,6 +1979,21 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     render();
     return true;
   }
+  const noteSheet = $("#note-sheet");
+  $("#note-edit").addEventListener("click", () => {
+    $("#note-heading").textContent = `Note for ${state.selected}`;
+    $("#note-input").value = typeof exEntry(state.selected)?.note === "string" ? exEntry(state.selected).note : "";
+    $("#note-status").textContent = "";
+    openSheet(noteSheet);
+    $("#note-input").focus();
+  });
+  $("#note-cancel").addEventListener("click", () => closeSheet(noteSheet));
+  $("#note-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const note = $("#note-input").value.trim();
+    if (setLiftOpt(state.selected, { note })) closeSheet(noteSheet);
+    else $("#note-status").textContent = $("#liftset-status").textContent;
+  });
   $("#liftset-btn").addEventListener("click", () => { $("#liftset-status").textContent = ""; renderLiftSet(); openSheet(lsetSheet); });
   $("#liftset-done").addEventListener("click", () => closeSheet(lsetSheet));
   lsetSheet.addEventListener("click", (e) => {
@@ -1949,6 +2021,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       } else logSet(f);
     } catch (e) { say(errText(e), true); }
   });
+  $("#warmup").addEventListener("change", updatePreview);
 
   // Steppers: one step on press; held past 350ms they repeat every 80ms until the thumb lifts or slides off.
   // Returns false at the floor (0 kg, 1 rep), which also ends a repeat.
@@ -2164,7 +2237,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const before = commitLifts(() => {
       const bw = isBW(old), wasHidden = state.hidden.includes(old);
       state.sets = state.sets.map((s) => (s.exercise === old ? { ...s, exercise: name } : s));
-      state.routines = state.routines.map((r) => ({ ...r, lifts: r.lifts.map((x) => (x === old ? name : x)) }));
+      state.routines = state.routines.map((r) => ({ ...r, lifts: r.lifts.map((x) => (x === old ? name : x)), ...(Array.isArray(r.targets) ? { targets: r.targets.map((t) => t && t.lift === old ? { ...t, lift: name } : t) } : {}) }));
       state.customEx = state.customEx.some((e) => e.name === old)
         ? state.customEx.map((e) => (e.name === old ? { ...e, name } : e))
         : [...state.customEx, { name, order: Date.now(), ...(bw ? { bodyweight: true } : {}) }];
@@ -2228,7 +2301,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   const rsheet = $("#routine-sheet");
   const rsay = (msg) => { $("#routine-status").textContent = msg; };
   function openRoutine(r) {
-    state.draft = r ? { id: r.id, lifts: [...r.lifts] } : { id: null, lifts: [] };
+    state.draft = r ? { id: r.id, lifts: [...r.lifts], targets: (Array.isArray(r.targets) ? r.targets : []).filter((t) => t && r.lifts.includes(t.lift)).map((t) => ({ ...t })) } : { id: null, lifts: [], targets: [] };
     $("#routine-h").textContent = r ? "Edit routine" : "New routine";
     $("#routine-name").value = r ? r.name : "";
     $("#routine-new").value = ""; $("#routine-filter").value = "";
@@ -2246,7 +2319,18 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       const i = d.lifts.indexOf(n);
       return `<button type="button" class="pick" data-ex="${esc(n)}" aria-pressed="${i >= 0}"><span class="ord">${i >= 0 ? i + 1 : ""}</span>${esc(n)}</button>`;
     }).join("");
+    $("#routine-targets").innerHTML = d.lifts.length ? `<p class="lbl">Optional targets</p>` + d.lifts.map((n, i) => {
+      const t = d.targets.find((x) => x.lift === n) || {};
+      return `<fieldset><legend>${esc(n)}</legend><label>Sets <input type="number" inputmode="numeric" min="1" max="100" data-target="sets" data-index="${i}" value="${esc(String(t.sets ?? ""))}"></label> <label>Min reps <input type="number" inputmode="numeric" min="1" max="1000" data-target="minReps" data-index="${i}" value="${esc(String(t.minReps ?? ""))}"></label> <label>Max reps <input type="number" inputmode="numeric" min="1" max="1000" data-target="maxReps" data-index="${i}" value="${esc(String(t.maxReps ?? ""))}"></label></fieldset>`;
+    }).join("") : "";
   }
+  $("#routine-targets").addEventListener("input", (e) => {
+    const input = e.target.closest("[data-target]"); if (!input) return;
+    const d = state.draft, lift = d.lifts[Number(input.dataset.index)]; if (!lift) return;
+    let target = d.targets.find((t) => t.lift === lift);
+    if (!target) { target = { lift }; d.targets.push(target); }
+    target[input.dataset.target] = input.value;
+  });
   $("#routine-picks").addEventListener("click", (e) => {
     const p = e.target.closest("[data-ex]"); if (!p) return;
     const d = state.draft, n = p.dataset.ex;
@@ -2268,7 +2352,16 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     if (!name) return rsay("Give the routine a name.");
     if (!d.lifts.length) return rsay("Pick at least one lift.");
     if (state.routines.some((r) => r.id !== d.id && r.name.toLowerCase() === name.toLowerCase())) return rsay(`You already have a routine called ${name}.`);
-    const entry = { id: d.id || newId(), name, lifts: d.lifts };
+    const targets = [];
+    for (const lift of d.lifts) {
+      const t = d.targets.find((x) => x.lift === lift); if (!t) continue;
+      const vals = [t.sets, t.minReps, t.maxReps];
+      if (vals.every((v) => v === "" || v == null)) continue;
+      const [sets, minReps, maxReps] = vals.map(Number);
+      if (vals.some((v) => v === "" || v == null) || !Number.isInteger(sets) || sets < 1 || sets > 100 || !Number.isInteger(minReps) || minReps < 1 || !Number.isInteger(maxReps) || maxReps < minReps || maxReps > 1000) return rsay(`Enter sets and a valid rep range for ${lift}, or leave all three blank.`);
+      targets.push({ lift, sets, minReps, maxReps });
+    }
+    const entry = { id: d.id || newId(), name, lifts: d.lifts, ...(targets.length ? { targets } : {}) };
     const before = state.routines;
     state.routines = d.id ? state.routines.map((r) => (r.id === d.id ? entry : r)) : [...state.routines, entry];
     try { save(); } catch (err) { state.routines = before; return rsay(errText(err)); }
@@ -2302,7 +2395,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const r = activeRoutine();
     if (r && !r.lifts.includes(s.exercise)) { prefs.routineId = null; savePrefs(); }
     state.editingId = id; state.selected = s.exercise; state.chartEx = null;
-    $("#date").value = s.date; $("#weight").value = s.weightKg; $("#reps").value = s.reps;
+    $("#date").value = s.date; $("#weight").value = s.weightKg; $("#reps").value = s.reps; $("#warmup").checked = s.warmup === true;
     $("#edit-text").textContent = `Editing ${s.exercise}, ${wt(s.exercise, s.weightKg)} × ${s.reps}`;
     $("#edit-bar").hidden = false;
     // Draw first (the open tab shows the row being edited), then go to the form at the top of Log
@@ -2313,7 +2406,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
   function stopEditing() {
     state.editingId = null; state.dateOpen = false;
-    $("#edit-bar").hidden = true; $("#date").value = todayKey();
+    $("#edit-bar").hidden = true; $("#date").value = todayKey(); $("#warmup").checked = false;
     render();
   }
   $("#cancel-edit").addEventListener("click", stopEditing);
@@ -2395,16 +2488,15 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
 
   const importError = (code) => { const e = new Error(code); e.name = "ImportError"; e.code = code; return e; };
-  // Merges a backup file into the log, all or nothing. Returns counts; throws importError("not-json"),
-  // importError("not-backup"), or the storage error from save() (and then the log is exactly as it was).
-  function importBackup(text) {
+  // Prepare the merge without changing the current log or writing storage.
+  function planBackupImport(text) {
     let data;
     try { data = JSON.parse(text); } catch (_) { throw importError("not-json"); }
     if (!isObj(data) || !Array.isArray(data.sets) || (data.app !== undefined && data.app !== "lift-tracker")) throw importError("not-backup");
 
     // Sets: skip ids the log already has. Sets without an id are matched on their content instead; the file's
     // n-th copy of an entry is skipped when the log already holds n copies, so importing twice adds nothing.
-    const sig = (s) => JSON.stringify([s.exercise, s.date, s.weightKg, s.reps, s.sets === undefined ? null : s.sets, s.createdAt === undefined ? null : s.createdAt]);
+    const sig = (s) => JSON.stringify([s.exercise, s.date, s.weightKg, s.reps, s.sets === undefined ? null : s.sets, s.createdAt === undefined ? null : s.createdAt, s.warmup === true]);
     const haveIds = new Set(state.sets.map((s) => s.id)), haveSig = new Map(), fileSig = new Map();
     for (const s of state.sets) { const k = sig(s); haveSig.set(k, (haveSig.get(k) || 0) + 1); }
     const incoming = [];
@@ -2423,7 +2515,12 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         incoming.push({ ...s, id: newId() });
       }
     }
-    const fileEx = Array.isArray(data.exercises) ? data.exercises.filter(validEx) : [];
+    // Report invalid records across all backup collections, not just sets.
+    const list = (key) => { if (data[key] == null) return []; if (!Array.isArray(data[key])) { bad++; return []; } return data[key]; };
+    const rawEx = list("exercises"), rawRt = list("routines"), rawBody = list("bodyweight"), rawHidden = list("hidden");
+    const fileEx = rawEx.filter(validEx), fileRoutines = cleanRoutines(rawRt), fileBody = cleanBody(rawBody);
+    bad += rawEx.length - fileEx.length + rawRt.length - fileRoutines.length + rawBody.length - fileBody.length
+      + rawHidden.filter((x) => !(typeof x === "string" && x)).length;
     const names = new Set(state.customEx.map((x) => x.name)), exs = [];
     for (const x of fileEx) if (!names.has(x.name)) { names.add(x.name); exs.push(x); }
     // Keep bodyweight flags from the backup for lifts you already have.
@@ -2431,9 +2528,9 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const fileOpt = new Map();
     for (const x of fileEx) if (!fileOpt.has(x.name)) fileOpt.set(x.name, x);
     const rids = new Set(state.routines.map((r) => r.id)), rts = [];
-    for (const r of cleanRoutines(data.routines)) if (!rids.has(r.id)) { rids.add(r.id); rts.push(r); }
+    for (const r of fileRoutines) if (!rids.has(r.id)) { rids.add(r.id); rts.push(r); }
     const days = new Set(state.body.map((b) => b.date)), body = [];
-    for (const b of cleanBody(data.bodyweight)) if (!days.has(b.date)) { days.add(b.date); body.push(b); }
+    for (const b of fileBody) if (!days.has(b.date)) { days.add(b.date); body.push(b); }
 
     const next = {
       sets: incoming.length ? [...state.sets, ...incoming] : state.sets,
@@ -2444,18 +2541,27 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         if (f && f !== x) {
           if (y.step === undefined && f.step !== undefined) y = { ...y, step: f.step };
           if (y.rest === undefined && f.rest !== undefined) y = { ...y, rest: f.rest };
+          if (y.note === undefined && typeof f.note === "string") y = { ...y, note: f.note };
         }
         return y;
       }),
       routines: rts.length ? [...state.routines, ...rts] : state.routines,
-      hidden: cleanHidden([...state.hidden, ...cleanHidden(data.hidden)]),
+      hidden: cleanHidden([...state.hidden, ...cleanHidden(rawHidden)]),
       body: body.length ? [...state.body, ...body] : state.body,
     };
+    const updatedLifts = state.customEx.filter((x) => { const y = next.customEx.find((e) => e.name === x.name); return y && JSON.stringify(y) !== JSON.stringify(x); }).length;
+    const newlyHidden = next.hidden.filter((name) => !state.hidden.includes(name)).length;
+    const counts = { added: incoming.length, skipped, bad, routines: rts.length, exercises: exs.length, body: body.length, updatedLifts, newlyHidden,
+      skippedOther: fileEx.length - exs.length + fileRoutines.length - rts.length + fileBody.length - body.length };
+    return { next, counts };
+  }
+  // Commit the exact planned merge atomically; restore in-memory data if storage fails.
+  function commitBackupImport(plan) {
     const before = { sets: state.sets, customEx: state.customEx, routines: state.routines, hidden: state.hidden, body: state.body };
     copyPrev(true);
-    Object.assign(state, next);
+    Object.assign(state, plan.next);
     try { save(); } catch (e) { Object.assign(state, before); throw e; }
-    return { added: incoming.length, skipped, bad, routines: rts.length };
+    return plan.counts;
   }
 
   $("#export-btn").addEventListener("click", async () => {
@@ -2473,21 +2579,49 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     downloadText(b.filename, b.blob);
     done();
   });
+  let pendingBackup = null;
+  const importMessage = (r) => `Add ${r.added} sets, ${r.exercises} lifts, ${r.routines} routines and ${r.body} weigh-ins. `
+    + `Update options for ${r.updatedLifts} existing lifts and hide ${r.newlyHidden} lifts. `
+    + `Skip ${r.skipped} matching sets and ${r.skippedOther} matching lifts, routines or weigh-ins. `
+    + `${r.bad} invalid ${r.bad === 1 ? "record" : "records"} excluded.`;
+  function hideImportPreview() {
+    pendingBackup = null;
+    $("#import-preview").hidden = true;
+  }
+  function showImportPreview(text, plan, changed = false) {
+    pendingBackup = { text, counts: JSON.stringify(plan.counts) };
+    $("#import-preview-summary").textContent = (changed ? "Your log changed. Review the updated counts. " : "") + importMessage(plan.counts);
+    $("#import-preview").hidden = false;
+    $("#import-confirm").focus();
+  }
+  function importFailure(err) {
+    bsay(err && err.code === "not-json" ? "That file can't be read. Pick the .json file made with Export backup."
+      : err && err.code === "not-backup" ? "That file isn't a Lift Tracker backup. Pick a file made with Export backup."
+      : `Nothing was imported. ${errText(err)}`, true);
+  }
   $("#import-btn").addEventListener("click", () => $("#import-file").click());
+  $("#import-cancel").addEventListener("click", () => { hideImportPreview(); $("#import-btn").focus(); });
   $("#import-file").addEventListener("change", async (e) => {
     const file = e.target.files[0]; e.target.value = "";
     if (!file) return;
-    let text, r;
+    hideImportPreview(); bsay("");
+    let text;
     try { text = await file.text(); } catch (_) { return bsay("Couldn't open that file. Try picking it again.", true); }
-    try { r = importBackup(text); } catch (err) {
-      return bsay(err && err.code === "not-json" ? "That file can't be read. Pick the .json file made with Export backup."
-        : err && err.code === "not-backup" ? "That file isn't a Lift Tracker backup. Pick a file made with Export backup."
-        : `Nothing was imported. ${errText(err)}`, true);
-    }
+    try { showImportPreview(text, planBackupImport(text)); } catch (err) { importFailure(err); }
+  });
+  $("#import-confirm").addEventListener("click", () => {
+    if (!pendingBackup) return;
+    let plan, r;
+    try {
+      plan = planBackupImport(pendingBackup.text);
+      if (JSON.stringify(plan.counts) !== pendingBackup.counts) return showImportPreview(pendingBackup.text, plan, true);
+      r = commitBackupImport(plan);
+    } catch (err) { return importFailure(err); }
+    hideImportPreview();
     prefs.seenBadges = earnedIds(stats()); savePrefs();
     render();
-    bsay(`Imported ${r.added} new ${r.added === 1 ? "entry" : "entries"}${r.routines ? ` and ${r.routines} ${r.routines === 1 ? "routine" : "routines"}` : ""}. `
-      + `Skipped ${r.skipped} already in your log${r.bad ? ` and ${r.bad} that couldn't be read` : ""}.`);
+    bsay(`Import complete. ${importMessage(r)}`);
+    $("#import-btn").focus();
   });
 
   let rz = null;

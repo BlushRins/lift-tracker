@@ -3,7 +3,7 @@
 name: Lift Tracker
 description: A training log kept like a field record; warm paper, ink rules, figures in mono, one tangerine key to press.
 # Token names match the CSS custom properties in index.html (paper = --color-paper, accent = --color-accent, space-md = --space-md).
-# The app (index.html, v11) uses this system. The landing page (about.html) still uses the older gym-floor system until it is redesigned.
+# The app (index.html, v11) uses this system. The landing page (about.html) uses the same theme.
 colors:
   paper: "oklch(96% 0.011 85)"
   paper-2: "oklch(99.5% 0.005 85)"
