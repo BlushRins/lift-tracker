@@ -159,6 +159,12 @@ input:disabled { opacity: 0.55; cursor: not-allowed; }
 .entry { border-radius: var(--radius-entry); background: var(--color-paper-2); box-shadow: 0 0 0 1px var(--color-ink), var(--shadow-lift); overflow: hidden; }
 .lift-name { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--color-head); color: var(--color-on-head); font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--tracking-display); line-height: 1.1; }
 .lift-name .of { flex: none; font-family: var(--font-body); font-size: var(--text-sm); font-weight: 500; letter-spacing: 0; opacity: 0.8; }
+.entry-cue, .routine-progress { padding: var(--space-xs) var(--space-md); border-bottom: 1px solid var(--color-rule); }
+.entry-cue { white-space: pre-wrap; overflow-wrap: anywhere; }
+.set-marks { display: flex; flex-wrap: wrap; gap: 3px; margin-top: var(--space-2xs); }
+.set-marks i { width: 10px; height: 4px; border: 1px solid var(--color-muted); border-radius: 2px; }
+.set-marks .logged { background: var(--color-ink); border-color: var(--color-ink); }
+#note-options summary { cursor: pointer; min-height: 44px; align-content: center; }
 .lift-btn:focus-visible { outline-color: var(--color-accent); outline-offset: 4px; }
 @media (prefers-reduced-motion: no-preference) {
   .lift-name.flash { animation: flash 600ms var(--ease-out) 450ms both; }
@@ -479,6 +485,11 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         <div class="edit-bar" id="edit-bar" hidden><span id="edit-text">Editing a set</span><button type="button" class="link" id="cancel-edit">Cancel</button></div>
         <div class="entry">
         <div class="lift-name" id="lift-name"></div>
+        <p class="entry-cue small" id="note-text" hidden></p>
+        <div class="routine-progress small" id="routine-progress" hidden>
+          <span id="routine-target-line"></span>
+          <span class="set-marks" id="set-marks" aria-hidden="true"></span>
+        </div>
         <div class="readout">
           <div class="rd">
             <input id="weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" enterkeyhint="next" aria-describedby="weight-l">
@@ -502,13 +513,8 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       </div>
 
       <div class="sec" id="beat"></div>
-      <div class="sec">
-        <div class="lbl-row"><span class="lbl">Lift note</span><button type="button" class="link small" id="note-edit">Add note</button></div>
-        <p class="small muted" id="note-text" hidden></p>
-      </div>
 
       <div class="sec">
-        <p class="small muted" id="routine-target-line" hidden></p>
         <p class="session" id="session-line" hidden></p>
         <div class="meta">
         <div class="date-row">
@@ -516,7 +522,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
           <span class="small muted">Not counted for progress or targets</span>
         </div>
         <div class="date-row">
-          <span class="lbl">Steps</span>
+          <span class="lbl">Lift settings</span>
           <span id="liftset-text">2.5 kg, rest 2:00</span>
           <button type="button" class="link" id="liftset-btn">Change</button>
         </div>
@@ -571,6 +577,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     <div class="sec">
       <div class="sec-head"><h2>Heaviest each week</h2><span id="chart-sub"></span></div>
       <div class="chart-box" id="chart"></div>
+      <p class="small" id="chart-session-change" hidden></p>
       <div class="legend" id="legend" hidden>
         <span><i><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="3.5" fill="var(--color-ink)"/></svg></i>Weekly best</span>
         <span><i><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--color-accent)" stroke="var(--color-ink)" stroke-width="1.5"/></svg></i>New PR</span>
@@ -676,19 +683,14 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       <div class="opts" id="ls-rest" role="group" aria-labelledby="ls-rest-l"></div>
       <p class="small muted">Starts when you log a set and counts down on the Log set button.</p>
     </div>
+    <details id="note-options">
+      <summary id="note-action">Add note</summary>
+      <div class="field"><label class="lbl" for="note-input">Technique or equipment reminder</label>
+        <textarea id="note-input" rows="3" maxlength="500"></textarea></div>
+    </details>
     <p class="status err" id="liftset-status" role="status" aria-live="polite"></p>
     <div class="sheet-btns"><button type="button" class="primary" id="liftset-done">Done</button></div>
   </div>
-</dialog>
-
-<dialog id="note-sheet" aria-labelledby="note-heading">
-  <form class="sheet" id="note-form">
-    <h2 id="note-heading">Lift note</h2>
-    <div class="field"><label class="lbl" for="note-input">Technique or equipment reminder</label>
-      <textarea id="note-input" rows="3" maxlength="500"></textarea></div>
-    <p class="status err" id="note-status" role="status" aria-live="polite"></p>
-    <div class="sheet-btns"><button type="button" id="note-cancel">Cancel</button><button type="submit" class="primary">Save</button></div>
-  </form>
 </dialog>
 
 <dialog id="pick-sheet" class="pick-dialog" aria-label="Choose a lift">
@@ -1426,12 +1428,18 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   function renderLog() {
     const r = activeRoutine(), ex = state.selected, d = formDate();
     const pos = r ? r.lifts.indexOf(ex) : -1;
-    setHTML($("#lift-name"), `<button type="button" class="lift-btn" id="lift-btn" aria-label="Change lift, now ${esc(ex)}"><span>${esc(ex)}</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${pos >= 0 ? `<span class="of">${pos + 1} of ${r.lifts.length}</span>` : ""}`);
+    setHTML($("#lift-name"), `<button type="button" class="lift-btn" id="lift-btn" aria-label="Change lift, now ${esc(ex)}"><span>${esc(ex)}</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${pos >= 0 ? `<span class="of">Lift ${pos + 1} of ${r.lifts.length}</span>` : ""}`);
     const done = setsOn(ex, d);
     const target = routineTarget(r, ex), targetLine = $("#routine-target-line");
-    targetLine.hidden = !target;
-    if (target) targetLine.textContent = `${setCount(workingSets(done))} of ${target.sets} sets, ${target.minReps}–${target.maxReps} reps`;
-    $("#submit-label").textContent = state.editingId ? "Save changes" : `Log set ${setCount(done) + 1}`;
+    $("#routine-progress").hidden = !target;
+    if (target) {
+      const logged = setCount(workingSets(done));
+      const reps = target.minReps === target.maxReps ? target.minReps : `${target.minReps}–${target.maxReps}`;
+      targetLine.textContent = `${logged} of ${target.sets} working ${target.sets === 1 ? "set" : "sets"} · ${reps} ${target.maxReps === 1 ? "rep" : "reps"}`;
+      setHTML($("#set-marks"), Array.from({ length: target.sets }, (_, i) => i < logged ? '<i class="logged"></i>' : '<i></i>').join(""));
+    }
+    $("#submit-label").textContent = state.editingId ? "Save changes"
+      : $("#warmup").checked ? "Log warm-up" : `Log set ${setCount(done) + 1}`;
     // The weight steppers and the Steps row follow the selected lift's step and rest.
     const st = stepOf(ex), sl = kgTrim(st), rs = restOf(ex);
     for (const b of document.querySelectorAll('[data-step="weight"]')) {
@@ -1441,13 +1449,11 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       b.setAttribute("aria-label", `${sl} kg ${less ? "less" : "more"}`);
     }
     $("#liftset-text").textContent = `${sl} kg, ${rs ? `rest ${mmss(rs)}` : "no rest timer"}`;
-    $("#liftset-btn").setAttribute("aria-label", `Change weight step and rest timer for ${ex}`);
+    $("#liftset-btn").setAttribute("aria-label", `Change lift settings for ${ex}`);
     showRest();
     const note = typeof exEntry(ex)?.note === "string" ? exEntry(ex).note : "";
     $("#note-text").textContent = note;
     $("#note-text").hidden = !note;
-    $("#note-edit").textContent = note ? "Edit note" : "Add note";
-    $("#note-edit").setAttribute("aria-label", `${note ? "Edit" : "Add"} note for ${ex}`);
     const line = $("#session-line");
     line.hidden = !done.length;
     if (done.length) line.innerHTML = `${d === todayKey() ? "Today" : dayLabel(d)}: <b>${summary(done)}</b>`;
@@ -1677,6 +1683,18 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     chartKey = key;
     $("#chart-sub").textContent = ex || "";
     $("#legend").hidden = weeks.length < 2;
+    const caption = $("#chart-session-change");
+    caption.hidden = true;
+    const latest = lastSetOf(ex);
+    if (latest) {
+      const current = bestSet(workingSets(setsOn(ex, latest.date)));
+      const previous = lastSession(ex, latest.date)?.top;
+      if (previous && previous.weightKg === current.weightKg && previous.reps !== current.reps) {
+        const direction = current.reps > previous.reps ? "up" : "down";
+        caption.textContent = `Latest session: ${wtKg(ex, current.weightKg)} × ${current.reps}, ${direction} from ${previous.reps} ${previous.reps === 1 ? "rep" : "reps"} last session.`;
+        caption.hidden = false;
+      }
+    }
     if (!weeks.length) {
       box.innerHTML = `<p class="empty"><strong>No ${esc(ex || "")} sets yet.</strong>Each week you log this lift becomes a point here.</p>`;
       return;
@@ -1979,23 +1997,26 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     render();
     return true;
   }
-  const noteSheet = $("#note-sheet");
-  $("#note-edit").addEventListener("click", () => {
-    $("#note-heading").textContent = `Note for ${state.selected}`;
-    $("#note-input").value = typeof exEntry(state.selected)?.note === "string" ? exEntry(state.selected).note : "";
-    $("#note-status").textContent = "";
-    openSheet(noteSheet);
-    $("#note-input").focus();
+  $("#liftset-btn").addEventListener("click", () => {
+    const note = exEntry(state.selected)?.note;
+    const input = $("#note-input");
+    input.defaultValue = typeof note === "string" ? note : "";
+    input.value = input.defaultValue;
+    $("#note-action").textContent = input.value ? "Edit note" : "Add note";
+    $("#note-options").open = false;
+    $("#liftset-status").textContent = "";
+    $("#liftset-done").textContent = "Done";
+    renderLiftSet();
+    openSheet(lsetSheet);
   });
-  $("#note-cancel").addEventListener("click", () => closeSheet(noteSheet));
-  $("#note-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const note = $("#note-input").value.trim();
-    if (setLiftOpt(state.selected, { note })) closeSheet(noteSheet);
-    else $("#note-status").textContent = $("#liftset-status").textContent;
+  $("#note-input").addEventListener("input", ({ target }) => {
+    $("#liftset-done").textContent = target.value !== target.defaultValue ? "Save note" : "Done";
   });
-  $("#liftset-btn").addEventListener("click", () => { $("#liftset-status").textContent = ""; renderLiftSet(); openSheet(lsetSheet); });
-  $("#liftset-done").addEventListener("click", () => closeSheet(lsetSheet));
+  $("#liftset-done").addEventListener("click", () => {
+    const input = $("#note-input");
+    if (input.value !== input.defaultValue && !setLiftOpt(state.selected, { note: input.value.trim() })) return;
+    closeSheet(lsetSheet);
+  });
   lsetSheet.addEventListener("click", (e) => {
     const b = e.target.closest("[data-step-v], [data-rest-v]"); if (!b) return;
     const patch = b.dataset.stepV ? { step: parseFloat(b.dataset.stepV) } : { rest: parseInt(b.dataset.restV, 10) };
@@ -2021,7 +2042,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       } else logSet(f);
     } catch (e) { say(errText(e), true); }
   });
-  $("#warmup").addEventListener("change", updatePreview);
+  $("#warmup").addEventListener("change", () => { renderLog(); updatePreview(); });
 
   // Steppers: one step on press; held past 350ms they repeat every 80ms until the thumb lifts or slides off.
   // Returns false at the floor (0 kg, 1 rep), which also ends a repeat.
