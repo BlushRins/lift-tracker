@@ -461,7 +461,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   </header>
 
   <!-- LOG -->
-  <section class="tab" id="tab-log" aria-labelledby="tb-log">
+  <section class="tab" id="tab-log" role="tabpanel" aria-labelledby="tb-log">
     <div class="notice" id="install-row" role="status" hidden>
       <p class="notice-text" id="install-text">Install Lift Tracker. It opens like an app and works with no signal.</p>
       <div class="notice-btns">
@@ -492,7 +492,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         </div>
         <div class="readout">
           <div class="rd">
-            <input id="weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" enterkeyhint="next" aria-describedby="weight-l">
+            <input id="weight" type="number" inputmode="decimal" min="0" max="1000" step="0.5" placeholder="0" enterkeyhint="next" aria-describedby="weight-l">
             <label for="weight" class="unit-l" id="weight-l">kg</label>
             <div class="steps">
               <button type="button" data-step="weight" data-d="-2.5" aria-label="2.5 kg less">−2.5</button>
@@ -549,7 +549,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   </section>
 
   <!-- PROGRESS -->
-  <section class="tab" id="tab-progress" aria-labelledby="tb-progress" hidden>
+  <section class="tab" id="tab-progress" role="tabpanel" aria-labelledby="tb-progress" hidden>
     <div class="sec first">
       <div class="sec-head"><h2>Strength gained</h2><button type="button" class="link small" id="info-btn">How it’s scored</button></div>
       <div class="big-num" id="gain-num" data-v="0">0<span class="unit">kg</span></div>
@@ -596,7 +596,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   </section>
 
   <!-- HISTORY -->
-  <section class="tab" id="tab-history" aria-labelledby="tb-history" hidden>
+  <section class="tab" id="tab-history" role="tabpanel" aria-labelledby="tb-history" hidden>
     <div class="sec first">
       <div class="sec-head"><h2>History</h2><span id="hist-count"></span></div>
       <div class="cal" id="cal"></div>
@@ -633,13 +633,13 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
 
 <nav class="tabbar" aria-label="Sections">
   <div class="inner" role="tablist">
-    <button type="button" role="tab" id="tb-log" data-tab="log" aria-controls="tab-log">
+    <button type="button" role="tab" id="tb-log" data-tab="log" aria-controls="tab-log" aria-selected="true" tabindex="0">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M3 12h18M6 7v10M18 7v10M3.5 9.5v5M20.5 9.5v5"/></svg>Log
     </button>
-    <button type="button" role="tab" id="tb-progress" data-tab="progress" aria-controls="tab-progress">
+    <button type="button" role="tab" id="tb-progress" data-tab="progress" aria-controls="tab-progress" aria-selected="false" tabindex="-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 20h16M5 15l4-4 3 3 7-7M15 7h4v4"/></svg>Progress
     </button>
-    <button type="button" role="tab" id="tb-history" data-tab="history" aria-controls="tab-history">
+    <button type="button" role="tab" id="tb-history" data-tab="history" aria-controls="tab-history" aria-selected="false" tabindex="-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>History
     </button>
   </div>
@@ -813,7 +813,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   const toNum = (v) => (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : v);
   const validSet = (s) => isObj(s) && typeof s.exercise === "string" && s.exercise !== "" && realDate(s.date)
     && typeof s.weightKg === "number" && Number.isFinite(s.weightKg) && s.weightKg >= 0
-    && Number.isInteger(s.reps) && s.reps >= 1;
+    && Number.isInteger(s.reps) && s.reps >= 1
+    // Older entries may hold several sets in one line; the count is rendered and summed, so it must be a real count.
+    && (s.sets == null || (Number.isInteger(s.sets) && s.sets >= 1 && s.sets <= 100))
+    && (s.createdAt == null || Number.isFinite(s.createdAt));
   // The set with numeric strings turned into numbers (every other field kept as is), or null if it can't be used.
   function repairSet(s) {
     if (!isObj(s)) return null;
@@ -1284,12 +1287,24 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   document.addEventListener("touchstart", () => {}, { passive: true });
 
   // At most 3 on screen. A toast with an action stays at least 5 seconds; ms: 0 stays until tapped.
+  // While a sheet is open the rest of the page is inert (a modal dialog), so a toast there couldn't be tapped:
+  // toasts go into the open sheet instead, and move back to the page when it closes (see sheetClosed).
+  function toastBox() {
+    const open = [...document.querySelectorAll("dialog[open]")].filter((d) => !d.classList.contains("closing")).at(-1);
+    if (!open) return $("#toasts");
+    if (!open._toasts) {
+      const b = document.createElement("div");
+      b.className = "toasts"; b.setAttribute("aria-live", "polite");
+      open.appendChild(b); open._toasts = b;
+    }
+    return open._toasts;
+  }
   function toast(html, { kind = "", action = null, ms = 3200 } = {}) {
-    const box = $("#toasts");
+    const box = toastBox();
     let live = [...box.children].filter((t) => !t.classList.contains("out"));
     while (live.length >= 3) {
-      // Make room by dropping the oldest timed toast; sticky ones (recovery, reminders) go last.
-      const old = live.find((t) => !t.dataset.sticky) || live[0];
+      // Make room by dropping the oldest plain toast; ones with a button (Undo) go next, sticky ones (recovery, reminders) last.
+      const old = live.find((t) => !t.dataset.sticky && !t.querySelector("button")) || live.find((t) => !t.dataset.sticky) || live[0];
       old.remove(); live = live.filter((t) => t !== old);
     }
     const el = document.createElement("div");
@@ -1340,6 +1355,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   function sheetClosed(dlg) {
     if (dlg._stopClose) { dlg._stopClose(); dlg._stopClose = null; }
     dlg.classList.remove("closing");
+    if (dlg._toasts) for (const t of [...dlg._toasts.children]) if (!t.classList.contains("out")) $("#toasts").appendChild(t);
     const o = dlg._opener;
     dlg._opener = null;
     // The lift picker hands focus to the lift name it just set; other openers may have been re-rendered.
@@ -1439,7 +1455,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       setHTML($("#set-marks"), Array.from({ length: target.sets }, (_, i) => i < logged ? '<i class="logged"></i>' : '<i></i>').join(""));
     }
     $("#submit-label").textContent = state.editingId ? "Save changes"
-      : $("#warmup").checked ? "Log warm-up" : `Log set ${setCount(done) + 1}`;
+      : $("#warmup").checked ? "Log warm-up" : `Log set ${setCount(workingSets(done)) + 1}`;
     // The weight steppers and the Steps row follow the selected lift's step and rest.
     const st = stepOf(ex), sl = kgTrim(st), rs = restOf(ex);
     for (const b of document.querySelectorAll('[data-step="weight"]')) {
@@ -1505,16 +1521,18 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const by = new Map();
     for (const s of [...items].sort(bySetOrder)) { if (!by.has(s.exercise)) by.set(s.exercise, []); by.get(s.exercise).push(s); }
     return [...by].map(([ex, list]) => {
-      let n = 0;
+      // Working sets are numbered 1, 2, 3 as on the Log button; warm-ups get their own count (W1, W2).
+      let n = 0, w = 0;
       const rows = list.map((s) => {
-        const k = s.sets || 1, label = k > 1 ? `${n + 1} to ${n + k}` : `${n + 1}`;
-        n += k;
+        const k = s.sets || 1, warm = s.warmup === true, from = warm ? w : n;
+        const label = (warm ? "W" : "") + (k > 1 ? `${from + 1} to ${from + k}` : `${from + 1}`);
+        if (warm) w += k; else n += k;
         return `<div class="set-row${s.id === state.editingId ? " editing" : ""}${fresh && s.id === fresh ? " new" : ""}">
           <span class="sn">${label}</span>
           <span class="ld">${wt(s.exercise, s.weightKg)} × ${s.reps}${k > 1 ? `<small> × ${k} sets</small>` : ""}${s.warmup === true ? `<small> Warm-up</small>` : ""}${prs.has(s.id) ? `<span class="pr-tag">PR</span>` : ""}</span>
           <span class="acts">
-            <button type="button" class="link" data-edit="${esc(s.id)}" aria-label="Edit ${esc(ex)} set ${label}">Edit</button>
-            <button type="button" class="link danger" data-del="${esc(s.id)}" aria-label="Delete ${esc(ex)} set ${label}">Delete</button>
+            <button type="button" class="link" data-edit="${esc(s.id)}" aria-label="Edit ${esc(ex)} ${warm ? "warm-up" : "set"} ${label}">Edit</button>
+            <button type="button" class="link danger" data-del="${esc(s.id)}" aria-label="Delete ${esc(ex)} ${warm ? "warm-up" : "set"} ${label}">Delete</button>
           </span></div>`;
       }).join("");
       return `<div class="lift-group"><div class="lg-head"><b>${esc(ex)}</b><span>${setCount(list)} ${setCount(list) === 1 ? "set" : "sets"}</span></div>${rows}</div>`;
@@ -1801,8 +1819,11 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     renderCal();
     const sorted = sortedSets().reverse();
     $("#hist-count").textContent = sorted.length ? `${setCount(sorted)} ${setCount(sorted) === 1 ? "set" : "sets"}` : "";
-    const list = sorted.slice(0, state.histLimit);
-    $("#show-more").hidden = sorted.length <= state.histLimit;
+    // Stop at a day boundary, so the last day shown is complete and its count is right.
+    let end = Math.min(state.histLimit, sorted.length);
+    while (end > 0 && end < sorted.length && sorted[end].date === sorted[end - 1].date) end++;
+    const list = sorted.slice(0, end);
+    $("#show-more").hidden = end >= sorted.length;
     if (!list.length) { $("#history").innerHTML = `<p class="empty"><strong>No sets yet.</strong>Everything you log shows up here, newest day first, with Edit and Delete.</p>`; return; }
     const days = new Map();
     for (const s of list) { if (!days.has(s.date)) days.set(s.date, []); days.get(s.date).push(s); }
@@ -1815,6 +1836,23 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const first = state.sets.reduce((d, s) => (!d || s.date < d ? s.date : d), null);
     $("#week-label").textContent = first ? `Week ${Math.max(1, Math.round((weekStart(todayKey()) - weekStart(first)) / (7 * DAY)) + 1)}` : "";
   }
+  // The day the app is showing. The app can stay open (or wait in the background) past midnight, so the header
+  // and the form's date move on with the clock. A date picked for an edit, or any other day picked on purpose, stays.
+  let shownDay = null;
+  function rollDay() {
+    const t = todayKey();
+    if (t === shownDay) return false;
+    const was = shownDay, now = new Date();
+    shownDay = t;
+    $("#today-label").textContent = `${WD[now.getDay()]} ${now.getDate()} ${MON[now.getMonth()]}`;
+    $("#date").max = t;
+    if (!state.editingId && (was === null || $("#date").value === was)) $("#date").value = t;
+    return was !== null;
+  }
+  const rollAndRender = () => { if (rollDay()) render(); };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") rollAndRender(); });
+  addEventListener("pageshow", rollAndRender);
+  setInterval(rollAndRender, 60000);
 
   // Only the tab on screen is drawn; the others are marked dirty and drawn when they are shown.
   const TABS = ["log", "progress", "history"];
@@ -1870,6 +1908,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     for (const t of TABS) {
       $("#tab-" + t).hidden = t !== name;
       $("#tb-" + t).setAttribute("aria-selected", t === name);
+      $("#tb-" + t).tabIndex = t === name ? 0 : -1;   // one Tab stop for the bar; arrow keys move between tabs
     }
     if (dirty.has(name)) renderTab(name);
     syncWake();
@@ -1883,8 +1922,19 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     stopEnter[name] = afterAnim(sec, "fade-in", 300, () => { sec.classList.remove("enter"); stopEnter[name] = null; });
   }
   document.querySelector(".tabbar").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+  // ARIA tabs keyboard pattern: Left/Right (wrapping), Home and End move to a tab and show it.
+  document.querySelector(".tabbar").addEventListener("keydown", (e) => {
+    const i = TABS.indexOf(e.target.dataset && e.target.dataset.tab); if (i < 0) return;
+    const to = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: TABS.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const name = TABS[(to + TABS.length) % TABS.length];
+    setTab(name); $("#tb-" + name).focus();
+  });
 
   // ---------- Logging (one set per tap) ----------
+  const MAX_KG = 1000;
+  let confirmHeavy = null;   // "lift|kg" the person was warned about; logging the same weight again goes through
   function say(msg, isErr) { const s = $("#status"); s.textContent = msg; s.classList.toggle("err", !!isErr); }
   function errText(e) {
     if (e && e.name === "LiftReadOnly") return "Nothing was saved: your saved log is damaged and there's no room to keep a safe copy of it. Tap Save copy on the notice first.";
@@ -1908,7 +1958,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const isPR = !f.warmup && !!prevTop && heavier(f, prevTop);
     // Strength gained before this PR, for the count-up the next time Progress is shown.
     const gainBefore = isPR && pendingGain === null ? gainOf(allWeeks()) : null;
-    const nth = setCount(setsOn(f.exercise, f.date)) + (f.sets || 1);   // read before the log changes
+    const nth = setCount(workingSets(setsOn(f.exercise, f.date))) + (f.sets || 1);   // working sets only; read before the log changes
     const entry = { ...f, id: newId(), createdAt: Date.now() };
     const before = state.sets;
     state.sets = [...state.sets, entry];
@@ -1997,7 +2047,18 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     render();
     return true;
   }
+  // The note is saved however the sheet closes (Done, Escape, a tap outside, the phone's Back), never dropped.
+  let lsetEx = null;   // the lift the open sheet is for
+  function saveNote() {
+    const input = $("#note-input");
+    if (!lsetEx || input.value === input.defaultValue) return true;
+    if (!setLiftOpt(lsetEx, { note: input.value.trim() })) return false;
+    input.defaultValue = input.value;
+    $("#liftset-done").textContent = "Done";
+    return true;
+  }
   $("#liftset-btn").addEventListener("click", () => {
+    lsetEx = state.selected;
     const note = exEntry(state.selected)?.note;
     const input = $("#note-input");
     input.defaultValue = typeof note === "string" ? note : "";
@@ -2012,10 +2073,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   $("#note-input").addEventListener("input", ({ target }) => {
     $("#liftset-done").textContent = target.value !== target.defaultValue ? "Save note" : "Done";
   });
-  $("#liftset-done").addEventListener("click", () => {
-    const input = $("#note-input");
-    if (input.value !== input.defaultValue && !setLiftOpt(state.selected, { note: input.value.trim() })) return;
-    closeSheet(lsetSheet);
+  $("#liftset-done").addEventListener("click", () => { if (saveNote()) closeSheet(lsetSheet); });
+  lsetSheet.addEventListener("close", () => {
+    if (!saveNote()) toast("Your note couldn't be saved on this device.", { ms: 5000 });
+    lsetEx = null;
   });
   lsetSheet.addEventListener("click", (e) => {
     const b = e.target.closest("[data-step-v], [data-rest-v]"); if (!b) return;
@@ -2025,9 +2086,20 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
 
   $("#log-form").addEventListener("submit", (ev) => {
     ev.preventDefault();
+    rollAndRender();   // the app may have been open since yesterday
     const f = readForm();
     if (!(f.weightKg > 0) && !(isBW(f.exercise) && f.weightKg === 0)) return say("Enter the weight in kg.", true);
-    if (!(f.reps >= 1)) return say("Enter at least 1 rep.", true);
+    if (f.weightKg > MAX_KG) return say(`Enter a weight up to ${MAX_KG} kg.`, true);
+    if (!/^\d+$/.test($("#reps").value.trim()) || !(f.reps >= 1)) return say("Enter reps as a whole number, at least 1.", true);
+    if (f.date > todayKey()) return say("That date is in the future. Pick today or an earlier day.", true);
+    // A weight far above this lift's best is usually a typo (1000 for 100): the first tap asks, the same tap again logs it.
+    const best = bestSet(workingSets(setsOf(f.exercise)).filter((s) => s.id !== state.editingId));
+    const heavyKey = `${f.exercise}|${f.weightKg}`;
+    if (!f.warmup && !isBW(f.exercise) && best && f.weightKg > Math.max(best.weightKg * 1.5, best.weightKg + 20) && confirmHeavy !== heavyKey) {
+      confirmHeavy = heavyKey;
+      return say(`${kgTrim(f.weightKg)} kg is far above your best of ${kgTrim(best.weightKg)} kg. Check the weight, or tap ${state.editingId ? "Save changes" : "Log"} again to confirm.`, true);
+    }
+    confirmHeavy = null;
     say("");
     try {
       if (state.editingId) {
@@ -2220,18 +2292,22 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   const lsheet = $("#lifts-sheet");
   const lsay = (msg) => { $("#lifts-status").textContent = msg; };
   const takeSnapshot = () => ({ sets: state.sets, customEx: state.customEx, routines: state.routines, hidden: state.hidden, selected: state.selected, chartEx: state.chartEx });
-  function restoreSnapshot(b) {
-    Object.assign(state, b);
-    try { save(); } catch (_) {}
-    render(); if (lsheet.open) renderManage();
-  }
-  // Applies a change to the lift data; rolls back if it can't be saved.
+  // Applies a change to the lift data; rolls back if it can't be saved. Returns whether it was saved.
   function commitLifts(fn) {
     const before = takeSnapshot();
     fn();
-    try { save(); } catch (e) { Object.assign(state, before); lsay(errText(e)); return null; }
+    try { save(); } catch (e) { Object.assign(state, before); lsay(errText(e)); return false; }
     render(); renderManage();
-    return before;
+    return true;
+  }
+  // Undo reverses only its own change, so anything logged or edited since then stays.
+  const undoLifts = (fn) => { if (!commitLifts(fn)) toast("Couldn't undo: this device couldn't save the change.", { ms: 5000 }); };
+  // A lift's name in its sets, routines (with their targets) and the current selection.
+  function renameEverywhere(from, to) {
+    state.sets = state.sets.map((s) => (s.exercise === from ? { ...s, exercise: to } : s));
+    state.routines = state.routines.map((r) => ({ ...r, lifts: r.lifts.map((x) => (x === from ? to : x)), ...(Array.isArray(r.targets) ? { targets: r.targets.map((t) => t && t.lift === from ? { ...t, lift: to } : t) } : {}) }));
+    if (state.selected === from) state.selected = to;
+    if (state.chartEx === from) state.chartEx = to;
   }
   function renderManage() {
     const counts = new Map();
@@ -2255,10 +2331,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     if (!name) return "A lift needs a name.";
     if (name === old) return null;
     if (exerciseList().some((n) => n !== old && n.toLowerCase() === name.toLowerCase())) return `You already have a lift called ${name}.`;
-    const before = commitLifts(() => {
-      const bw = isBW(old), wasHidden = state.hidden.includes(old);
-      state.sets = state.sets.map((s) => (s.exercise === old ? { ...s, exercise: name } : s));
-      state.routines = state.routines.map((r) => ({ ...r, lifts: r.lifts.map((x) => (x === old ? name : x)), ...(Array.isArray(r.targets) ? { targets: r.targets.map((t) => t && t.lift === old ? { ...t, lift: name } : t) } : {}) }));
+    const wasHidden = state.hidden.includes(old);
+    const saved = commitLifts(() => {
+      const bw = isBW(old);
+      renameEverywhere(old, name);
       state.customEx = state.customEx.some((e) => e.name === old)
         ? state.customEx.map((e) => (e.name === old ? { ...e, name } : e))
         : [...state.customEx, { name, order: Date.now(), ...(bw ? { bodyweight: true } : {}) }];
@@ -2266,10 +2342,13 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       state.hidden = state.hidden.filter((x) => x !== old);
       if (DEFAULT_EX.includes(old)) state.hidden.push(old);
       if (wasHidden) state.hidden.push(name);
-      if (state.selected === old) state.selected = name;
-      if (state.chartEx === old) state.chartEx = name;
     });
-    if (before) toast(`Renamed ${esc(old)} to ${esc(name)}.`, { ms: 5000, action: { label: "Undo", fn: () => restoreSnapshot(before) } });
+    if (saved) toast(`Renamed ${esc(old)} to ${esc(name)}.`, { ms: 5000, action: { label: "Undo", fn: () => undoLifts(() => {
+      renameEverywhere(name, old);
+      state.customEx = state.customEx.map((e) => (e.name === name ? { ...e, name: old } : e));
+      state.hidden = state.hidden.filter((x) => x !== old && x !== name);
+      if (wasHidden) state.hidden.push(old);
+    }) } });
     return null;
   }
   $("#edit-lifts").addEventListener("click", () => { lsay(""); renderManage(); openSheet(lsheet); });
@@ -2295,16 +2374,29 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const rowEl = e.target.closest(".lm-row"); if (!rowEl) return;
     const ex = rowEl.dataset.ex;
     if (e.target.closest("[data-hide]")) {
-      const before = commitLifts(() => { state.hidden = [...state.hidden, ex]; });
-      if (before) toast(`Hid ${esc(ex)}. Its history stays.`, { ms: 5000, action: { label: "Undo", fn: () => restoreSnapshot(before) } });
+      if (commitLifts(() => { state.hidden = [...state.hidden, ex]; })) {
+        toast(`Hid ${esc(ex)}. Its history stays.`, { ms: 5000, action: { label: "Undo", fn: () => undoLifts(() => { state.hidden = state.hidden.filter((x) => x !== ex); }) } });
+      }
     } else if (e.target.closest("[data-show]")) {
       commitLifts(() => { state.hidden = state.hidden.filter((x) => x !== ex); });
     } else if (e.target.closest("[data-delete]")) {
-      const before = commitLifts(() => {
+      const entry = state.customEx.find((x) => x.name === ex), had = state.routines.filter((r) => r.lifts.includes(ex));
+      const saved = commitLifts(() => {
         state.customEx = state.customEx.filter((x) => x.name !== ex);
         state.routines = state.routines.map((r) => ({ ...r, lifts: r.lifts.filter((x) => x !== ex) })).filter((r) => r.lifts.length);
       });
-      if (before) toast(`Deleted ${esc(ex)}.`, { ms: 5000, action: { label: "Undo", fn: () => restoreSnapshot(before) } });
+      // Undo puts the lift back in each routine at its old place; a routine removed for being left empty comes back whole.
+      if (saved) toast(`Deleted ${esc(ex)}.`, { ms: 5000, action: { label: "Undo", fn: () => undoLifts(() => {
+        if (entry && !state.customEx.some((x) => x.name === ex)) state.customEx = [...state.customEx, entry];
+        for (const r0 of had) {
+          const cur = state.routines.find((r) => r.id === r0.id);
+          if (!cur) { state.routines = [...state.routines, r0]; continue; }
+          if (cur.lifts.includes(ex)) continue;
+          const lifts = [...cur.lifts];
+          lifts.splice(Math.min(r0.lifts.indexOf(ex), lifts.length), 0, ex);
+          state.routines = state.routines.map((r) => (r === cur ? { ...cur, lifts } : r));
+        }
+      }) } });
     }
   });
 
@@ -2851,9 +2943,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   }
 
   // ---------- Boot ----------
-  const now = new Date();
-  $("#today-label").textContent = `${WD[now.getDay()]} ${now.getDate()} ${MON[now.getMonth()]}`;
-  $("#date").value = todayKey();
+  rollDay();
   load(); bootStorage();
   // First open of this version: count milestones already earned as seen, so they don't all pop at once.
   if (!Array.isArray(prefs.seenBadges)) { prefs.seenBadges = earnedIds(stats()); savePrefs(); }
