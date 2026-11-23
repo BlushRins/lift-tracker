@@ -3,7 +3,7 @@
 name: Lift Tracker
 description: A training log kept like a field record; warm paper, ink rules, figures in mono, one tangerine key to press.
 # Token names match the CSS custom properties in index.html (paper = --color-paper, accent = --color-accent, space-md = --space-md).
-# The app (index.html, v11) uses this system. The landing page (about.html) uses the same theme.
+# The app (index.html, v12) uses this system. The landing page (about.html) uses the same theme.
 colors:
   paper: "oklch(96% 0.011 85)"
   paper-2: "oklch(99.5% 0.005 85)"
@@ -122,7 +122,9 @@ Labels, chips, tabs and table heads are Red Hat Text 500 a step smaller, sentenc
 
 ## Layout
 
-One column at a phone's width (560px max). Spacing uses the `space-*` steps. Sections are separated by whitespace and a 1px ink rule over each list, with `rule` hairlines between rows. Only two surfaces lift: the entry card and the backup sheet.
+One column at a phone's width (560px max). Spacing uses the `space-*` steps. Each block (Last time, the set options, Today, every Progress section, each History day, the calendar, Backup) is a card: paper-2 with a 1px `rule` edge and the 10px card radius, a 1px ink rule over each list inside it, `rule` hairlines between rows. Only the entry card lifts, ringed in ink with a shadow.
+
+The Log screen opens on this week (Monday to Sunday, trained days green, today ringed in ink). Under the entry, Last time is a set table: last session beside this one, row by row, with the set about to be logged marked by an ink bar and showing what is in the entry. In a routine, each lift chip carries its sets against the target (1/3). Progress adds a 12 week consistency grid and a Stalled list (lifts with no new best in their last 3 sessions).
 
 ## Components
 
@@ -153,3 +155,4 @@ Transforms and opacity only, 120 to 220ms, `ease-out` arrivals: a key press, a t
 | 2026-11-15 | Token names match the CSS; `fs-*` type scale and `sp-*` spacing added | Design-system audit: 33 font sizes and 18 spacing values collapsed to 13 and 9 steps with no layout change |
 | 2026-11-16 | v10: rest timer inside the Log set button, per-lift weight step and rest, screen kept on during a workout | The timer lives in the button so nothing moves under the thumb |
 | 2026-11-16 | v11: full Hallmark redesign on the Furrow theme, replacing the gym-floor system in the app | The owner asked for a new dealt theme and named all four aims: a busy Log screen, plain Progress and History, a generated look, a fresh version |
+| 2026-11-24 | v12: cards for every block, a this-week strip on Log, a set-by-set Last time table, routine counts on chips, a 12 week consistency grid and a Stalled list on Progress | Layout ideas taken from a reference tracker the owner shared; fonts, colours and the no e1RM / no volume rules unchanged |

@@ -105,12 +105,25 @@ button, input, select, textarea { font: inherit; }
 .top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); padding-bottom: var(--space-md); }
 .top .wk { color: var(--color-muted); font-size: var(--text-sm); font-weight: 500; white-space: nowrap; }
 
-/* Sections: whitespace and a 1px ink rule over each list; no boxes except the entry card and the backup sheet */
+/* Sections: each block of the record is a card, a paper-2 page with a hairline edge; the entry card alone is lifted in ink */
 .tab { display: flex; flex-direction: column; }
 .sec { padding-block: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
 .sec.first { padding-top: 0; }
+.card { border-radius: var(--radius-card); background: var(--color-paper-2); box-shadow: 0 0 0 1px var(--color-rule); }
+.sec.card { padding: var(--space-md); margin-block: var(--space-xs); }
+.sec.first.card { margin-top: 0; }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; }
 .sec-head > span { color: var(--color-muted); font-size: var(--text-sm); }
+
+/* This week, Monday to Sunday, over the Log screen: trained days green, today ringed in ink, days to come dashed */
+.week { display: flex; flex-direction: column; gap: var(--space-xs); padding-bottom: var(--space-md); }
+.week-head { display: flex; justify-content: space-between; gap: var(--space-sm); }
+.week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-2xs); }
+.wd { display: grid; place-items: center; height: 36px; border: var(--rule-hair) solid var(--color-grid-strong); border-radius: var(--radius-pill); background: var(--color-paper-2); color: var(--color-muted); font-size: var(--text-xs); font-weight: 500; }
+.wd.on { background: var(--color-green); border-color: var(--color-green); color: var(--color-on-ink); }
+.wd.today { border-color: var(--color-ink); color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-ink); }
+.wd.on.today { color: var(--color-on-ink); box-shadow: inset 0 0 0 2px var(--color-paper-2); }
+.wd.later { border-style: dashed; background: transparent; }
 .sec > div:empty:not(:first-child), .sec > p:empty:not(:first-child) { margin-top: calc(-1 * var(--space-md)); }
 
 /* Keys: moulded at 6px. Primary tangerine with ink on it; secondary white with a lit top edge. */
@@ -148,6 +161,8 @@ input:disabled { opacity: 0.55; cursor: not-allowed; }
 .chip.add { border-style: dashed; color: var(--color-muted); box-shadow: none; background: transparent; }
 .chip.find { display: inline-flex; align-items: center; gap: var(--space-xs); }
 .chip.done:not([aria-pressed="true"]) { color: var(--color-muted); }
+/* A routine lift's sets so far against its target, in figures */
+.chip .cnt { margin-left: var(--space-xs); font-family: var(--font-outlier); font-size: var(--text-xs); font-variant-numeric: tabular-nums; opacity: 0.75; }
 .lift-btn { display: inline-flex; align-items: center; gap: var(--space-xs); min-width: 0; min-height: 44px; padding: 0; margin-block: calc(-1 * var(--space-xs)); background: none; border: none; box-shadow: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; }
 .lift-btn:hover { border: none; }
 .lift-btn:active { transform: none; background: none; opacity: 0.7; }
@@ -192,8 +207,14 @@ input:disabled { opacity: 0.55; cursor: not-allowed; }
 .plates .txt b { color: var(--color-ink); font-family: var(--font-outlier); font-weight: 500; white-space: nowrap; }
 .bar-toggle { min-height: 44px; padding: 0 var(--space-sm); font-size: var(--text-xs); }
 
-/* Last time and the two targets */
-.last-sets { font-family: var(--font-outlier); font-size: var(--text-xl); font-weight: 500; line-height: 1.25; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+/* Last time beside this session, set by set; the set about to be logged is the marked row */
+.sets-tbl th:first-child, .sets-tbl td:first-child { width: 3rem; padding-left: var(--space-xs); }
+.sets-tbl td { height: 44px; font-family: var(--font-outlier); font-size: var(--text-md); font-weight: 500; font-variant-numeric: tabular-nums; }
+.sets-tbl td.prev { color: var(--color-muted); }
+.sets-tbl td.sn { font-size: var(--text-sm); font-weight: 400; }
+.sets-tbl tr.next td { background: var(--color-paper-3); }
+.sets-tbl tr.next td:first-child { box-shadow: inset 3px 0 0 var(--color-ink); color: var(--color-ink); }
+.sets-tbl .up { margin-left: var(--space-2xs); color: var(--color-green); font-size: 0.8em; }
 .targets { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-xs); }
 .target { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-3xs); min-height: 64px; padding: var(--space-xs) var(--space-sm); text-align: left; }
 .target b { font-family: var(--font-outlier); font-size: var(--text-lg); font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -206,9 +227,8 @@ input:disabled { opacity: 0.55; cursor: not-allowed; }
 .mk.down { color: var(--color-error); }
 
 /* Date and steps: two quiet ruled lines */
-.session { color: var(--color-muted); font-size: var(--text-sm); }
-.session b { color: var(--color-ink); font-family: var(--font-outlier); font-weight: 500; }
-.meta { border-top: var(--rule-hair) solid var(--color-ink); }
+.meta { margin-block: calc(-1 * var(--space-xs)); }
+.meta .date-row:last-child { border-bottom: none; }
 .date-row { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) auto; align-items: center; gap: var(--space-sm); min-height: 48px; border-bottom: var(--rule-hair) solid var(--color-rule); }
 .date-row input { width: auto; justify-self: start; font-family: var(--font-outlier); }
 .date-row > .link { margin-right: calc(-1 * var(--space-xs)); }
@@ -246,7 +266,8 @@ input:disabled { opacity: 0.55; cursor: not-allowed; }
 .pr-tag { display: inline-block; margin-left: var(--space-xs); padding: 0 var(--space-2xs); border-radius: 3px; background: var(--color-accent); color: var(--color-accent-ink); font-family: var(--font-body); font-size: var(--text-xs); font-weight: 500; line-height: 1.5; vertical-align: 1px; }
 .acts { display: flex; }
 .acts .link { font-size: var(--text-sm); }
-.days { display: flex; flex-direction: column; gap: var(--space-lg); }
+.days { display: flex; flex-direction: column; gap: var(--space-sm); }
+.days > .card { padding: var(--space-md) var(--space-md) var(--space-xs); }
 .day-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); padding-bottom: var(--space-2xs); }
 .day-head h3 { font-size: var(--text-lg); }
 .day-head span { color: var(--color-muted); font-size: var(--text-sm); }
@@ -256,11 +277,15 @@ input:disabled { opacity: 0.55; cursor: not-allowed; }
 /* Progress: the strength figure leads, set big in the display face */
 .big-num { font-family: var(--font-display); font-size: var(--text-hero); font-weight: 600; line-height: 0.95; letter-spacing: var(--tracking-display); font-variant-numeric: tabular-nums; }
 .big-num .unit { margin-left: 0.12em; color: var(--color-muted); font-family: var(--font-body); font-size: 0.32em; font-weight: 500; letter-spacing: 0; }
-.strip-wrap { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
-.strip { display: flex; gap: var(--space-2xs); }
-.strip .w { width: 20px; height: 20px; border: var(--rule-hair) solid var(--color-muted); border-radius: 3px; }
-.strip .w.on { background: var(--color-green); border-color: var(--color-green); }
-.strip .w.now:not(.on) { border-style: dashed; }
+/* Consistency: the last 12 weeks, one column a week, Monday on top; trained days green */
+.heat-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-xs); }
+.heat-dow { display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 3px; color: var(--color-muted); font-size: var(--text-xs); line-height: 1; }
+.heat-dow span { display: grid; align-items: center; }
+.heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: minmax(0, 1fr); gap: 3px; }
+.heat i { aspect-ratio: 1; border-radius: 3px; background: var(--color-paper-3); }
+.heat i.on { background: var(--color-green); }
+.heat i.today { box-shadow: inset 0 0 0 2px var(--color-ink); }
+.heat i.later { background: transparent; box-shadow: inset 0 0 0 1px var(--color-rule); }
 .strip-l { color: var(--color-muted); }
 .strip-l b { color: var(--color-ink); font-size: var(--text-lg); }
 .rows { display: flex; flex-direction: column; border-top: var(--rule-hair) solid var(--color-ink); }
@@ -269,6 +294,8 @@ input:disabled { opacity: 0.55; cursor: not-allowed; }
 .lift-row[aria-pressed="true"] { background: var(--color-accent-soft); }
 .lift-row:active { transform: none; }
 .lift-row svg { width: 64px; height: 24px; }
+.lift-row.stall { grid-template-columns: minmax(0, 1fr) auto; }
+.stall .dl { color: var(--color-muted); }
 .lr-name { display: flex; flex-direction: column; min-width: 0; font-size: var(--text-md); font-weight: 500; }
 .lr-name small { color: var(--color-muted); font-size: var(--text-sm); font-weight: 400; }
 .lr-val { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3xs); font-family: var(--font-outlier); font-size: var(--text-lg); font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -300,7 +327,7 @@ td.n { font-family: var(--font-outlier); font-weight: 500; font-variant-numeric:
 .ms-p { color: var(--color-muted); font-family: var(--font-outlier); font-size: var(--text-sm); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* Training calendar: trained days tangerine with ink figures, today ringed in ink */
-.cal { display: flex; flex-direction: column; gap: var(--space-xs); padding-bottom: var(--space-xs); }
+.cal { display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-sm) var(--space-md); }
 .cal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
 .cal-head h3 { font-size: var(--text-lg); }
 .cal-nav { display: flex; gap: var(--space-xs); }
@@ -322,7 +349,6 @@ button.cal-day.on.today { box-shadow: inset 0 0 0 2px var(--color-accent-ink); }
 .bw-row .num { font-size: var(--text-md); font-weight: 500; }
 
 /* Backup: the exported record, a white sheet opened flat */
-.backup { margin-top: var(--space-md); padding: var(--space-lg) var(--space-md); border-radius: var(--radius-sheet); background: var(--color-sheet); box-shadow: var(--shadow-card); }
 .backup-row { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 #backup-last { margin-top: calc(-1 * var(--space-xs)); }
 #backup-last:empty { display: none; }
@@ -462,6 +488,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
 
   <!-- LOG -->
   <section class="tab" id="tab-log" role="tabpanel" aria-labelledby="tb-log">
+    <div class="week" id="week-strip">
+      <div class="week-head"><span class="lbl">This week</span><span class="lbl" id="week-days-text"></span></div>
+      <div class="week-days" id="week-days" aria-hidden="true"></div>
+    </div>
     <div class="notice" id="install-row" role="status" hidden>
       <p class="notice-text" id="install-text">Install Lift Tracker. It opens like an app and works with no signal.</p>
       <div class="notice-btns">
@@ -512,10 +542,9 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         </div>
       </div>
 
-      <div class="sec" id="beat"></div>
+      <div class="sec card" id="beat"></div>
 
-      <div class="sec">
-        <p class="session" id="session-line" hidden></p>
+      <div class="sec card">
         <div class="meta">
         <div class="date-row">
           <label class="bw-check"><input type="checkbox" id="warmup"> Warm-up set</label>
@@ -542,7 +571,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       </div>
     </form>
 
-    <div class="sec">
+    <div class="sec card">
       <div class="sec-head"><h2>Today</h2><span id="today-sum"></span></div>
       <div id="today-list"></div>
     </div>
@@ -550,19 +579,47 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
 
   <!-- PROGRESS -->
   <section class="tab" id="tab-progress" role="tabpanel" aria-labelledby="tb-progress" hidden>
-    <div class="sec first">
+    <div class="sec first card">
       <div class="sec-head"><h2>Strength gained</h2><button type="button" class="link small" id="info-btn">How it’s scored</button></div>
       <div class="big-num" id="gain-num" data-v="0">0<span class="unit">kg</span></div>
       <p class="muted" id="gain-sub"></p>
-      <div class="strip-wrap" id="streak"></div>
     </div>
 
-    <div class="sec">
+    <div class="sec card">
+      <div class="sec-head"><h2>Consistency</h2><span>Last 12 weeks</span></div>
+      <div class="heat-wrap" aria-hidden="true">
+        <div class="heat-dow"><span>M</span><span></span><span>W</span><span></span><span>F</span><span></span><span></span></div>
+        <div class="heat" id="heat"></div>
+      </div>
+      <p class="strip-l" id="streak"></p>
+    </div>
+
+    <div class="sec card">
       <div class="sec-head"><h2>Personal records</h2><span>Heaviest weight</span></div>
       <div class="rows" id="lift-rows"></div>
     </div>
 
-    <div class="sec">
+    <div class="sec card" id="stall-sec" hidden>
+      <div class="sec-head"><h2>Stalled</h2><span>No new best in 3 sessions</span></div>
+      <div class="rows" id="stalled"></div>
+    </div>
+
+    <div class="sec card">
+      <div class="sec-head"><h2>Heaviest each week</h2><span id="chart-sub"></span></div>
+      <div class="chart-box" id="chart"></div>
+      <p class="small" id="chart-session-change" hidden></p>
+      <div class="legend" id="legend" hidden>
+        <span><i><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="3.5" fill="var(--color-ink)"/></svg></i>Weekly best</span>
+        <span><i><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--color-accent)" stroke="var(--color-ink)" stroke-width="1.5"/></svg></i>New PR</span>
+      </div>
+    </div>
+
+    <div class="sec card">
+      <div class="sec-head"><h2>Week by week</h2><span>Monday to Sunday</span></div>
+      <div id="weeks"></div>
+    </div>
+
+    <div class="sec card">
       <div class="sec-head"><h2>Body weight</h2><span>Weigh in once a week</span></div>
       <form class="body-form" id="body-form" novalidate>
         <input id="body-kg" type="number" inputmode="decimal" step="0.1" min="20" max="400" placeholder="kg" aria-label="Your body weight today, in kg">
@@ -574,22 +631,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       <div id="body-list"></div>
     </div>
 
-    <div class="sec">
-      <div class="sec-head"><h2>Heaviest each week</h2><span id="chart-sub"></span></div>
-      <div class="chart-box" id="chart"></div>
-      <p class="small" id="chart-session-change" hidden></p>
-      <div class="legend" id="legend" hidden>
-        <span><i><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="3.5" fill="var(--color-ink)"/></svg></i>Weekly best</span>
-        <span><i><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--color-accent)" stroke="var(--color-ink)" stroke-width="1.5"/></svg></i>New PR</span>
-      </div>
-    </div>
-
-    <div class="sec">
-      <div class="sec-head"><h2>Week by week</h2><span>Monday to Sunday</span></div>
-      <div id="weeks"></div>
-    </div>
-
-    <div class="sec">
+    <div class="sec card">
       <div class="sec-head"><h2>Milestones</h2><span id="badge-count"></span></div>
       <div id="badges"></div>
     </div>
@@ -599,12 +641,12 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   <section class="tab" id="tab-history" role="tabpanel" aria-labelledby="tb-history" hidden>
     <div class="sec first">
       <div class="sec-head"><h2>History</h2><span id="hist-count"></span></div>
-      <div class="cal" id="cal"></div>
+      <div class="cal card" id="cal"></div>
       <div id="history" class="days"></div>
       <button type="button" class="link" id="show-more" hidden>Show older sets</button>
     </div>
 
-    <div class="sec backup">
+    <div class="sec card backup">
       <h2>Backup</h2>
       <p class="small muted">Your log is saved on this phone only. Export a backup file now and then, and import it to restore your log or move it to another device.</p>
       <p class="small muted" id="backup-last"></p>
@@ -1106,14 +1148,6 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const sets = l.slice(start, lo);
     return { date, sets, top: bestSet(sets) };
   }
-  // "200 kg × 8, 8, 7" when the weight stayed the same, else "80×8, 85×6".
-  function summary(list) {
-    const flat = list.flatMap((s) => Array(Math.min(s.sets || 1, 20)).fill(s));
-    if (!flat.length) return "";
-    return flat.every((s) => s.weightKg === flat[0].weightKg)
-      ? `${wtKg(flat[0].exercise, flat[0].weightKg)} × ${flat.map((s) => s.reps).join(", ")}`
-      : flat.map((s) => `${wt(s.exercise, s.weightKg)}×${s.reps}`).join(", ");
-  }
 
   const activeRoutine = () => state.routines.find((r) => r.id === prefs.routineId) || null;
   const routineTarget = (r, ex) => Array.isArray(r?.targets) ? r.targets.find((t) => t && t.lift === ex && Number.isInteger(t.sets) && t.sets > 0 && t.sets <= 100 && Number.isInteger(t.minReps) && t.minReps > 0 && t.minReps <= 1000 && Number.isInteger(t.maxReps) && t.maxReps >= t.minReps && t.maxReps <= 1000) : null;
@@ -1419,7 +1453,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     }
     setHTML($("#chips"), `<button type="button" class="chip find" id="find-btn">${SEARCH_SVG}Search</button>` + names.map((n) => {
       const done = r && doneToday(n);
-      return `<button type="button" class="chip${done ? " done" : ""}" data-ex="${esc(n)}" aria-pressed="${n === state.selected}">${done ? `<span aria-hidden="true">✓ </span>` : ""}${esc(n)}${done ? `<span class="sr">, done today</span>` : ""}</button>`;
+      // A routine lift under way shows its sets against the target, so the row reads as the session's progress.
+      const target = r && !done ? routineTarget(r, n) : null, count = target ? setCount(workingSets(setsOn(n, formDate()))) : 0;
+      const cnt = count ? `<span class="cnt" aria-hidden="true">${count}/${target.sets}</span><span class="sr">, ${count} of ${target.sets} sets</span>` : "";
+      return `<button type="button" class="chip${done ? " done" : ""}" data-ex="${esc(n)}" aria-pressed="${n === state.selected}">${done ? `<span aria-hidden="true">✓ </span>` : ""}${esc(n)}${done ? `<span class="sr">, done today</span>` : ""}${cnt}</button>`;
     }).join(""));
     requestAnimationFrame(revealChip);
   }
@@ -1470,9 +1507,6 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const note = typeof exEntry(ex)?.note === "string" ? exEntry(ex).note : "";
     $("#note-text").textContent = note;
     $("#note-text").hidden = !note;
-    const line = $("#session-line");
-    line.hidden = !done.length;
-    if (done.length) line.innerHTML = `${d === todayKey() ? "Today" : dayLabel(d)}: <b>${summary(done)}</b>`;
     const next = r && !state.editingId && doneToday(ex) ? nextLift(r) : null;
     const nb = $("#next-btn");
     nb.hidden = !next;
@@ -1489,7 +1523,8 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const w = parseFloat($("#weight").value), r = parseInt($("#reps").value, 10);
     const valid = w > 0 && r >= 1;
     if (!last) {
-      setHTML(box, `<h2>Last time</h2><p class="muted">First time logging ${esc(state.selected)}. This set becomes your baseline, and next time you'll get a target to beat.</p>`);
+      const done = workingSets(setsOn(state.selected, formDate()));
+      setHTML(box, `<h2>Last time</h2><p class="muted">First time logging ${esc(state.selected)}. This set becomes your baseline, and next time you'll get a target to beat.</p>${done.length ? setTable(null, w, r) : ""}`);
       return;
     }
     const t = last.top, st = stepOf(state.selected);
@@ -1504,10 +1539,30 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       verdict = heavier(set, t) || heavier(t, set) ? `${change(set, t)}, ${word.toLowerCase()}` : `<span class="mk" aria-hidden="true">=</span>${word}`;
     }
     setHTML(box, `<div class="sec-head"><h2>Last time</h2><span>${dayLabel(last.date)}</span></div>
-      <div class="last-sets">${summary(last.sets)}</div>
+      ${setTable(last, w, r)}
       <span class="lbl">Beat it</span>
       <div class="targets">${targets.map((x) => `<button type="button" class="target" data-w="${x.w}" data-r="${x.r}" aria-pressed="${valid && x.w === w && x.r === r}"><b>${wt(state.selected, x.w)} × ${x.r}</b><small>${x.why}</small></button>`).join("")}</div>
       <p class="verdict">${verdict}</p>`);
+  }
+  // Set by set: last session's working sets beside this session's, with the set about to be logged as a marked
+  // row showing what is in the entry now. A set that beats the same set last time gets a green mark.
+  function setTable(last, w, r) {
+    const ex = state.selected, d = formDate();
+    const flat = (list) => list.flatMap((s) => Array(Math.min(s.sets || 1, 20)).fill(s));
+    const prev = last ? flat(last.sets) : [], now = flat(workingSets(setsOn(ex, d)));
+    const target = routineTarget(activeRoutine(), ex);
+    const next = state.editingId ? -1 : now.length;
+    const rows = Math.min(20, Math.max(prev.length, now.length + (next >= 0 ? 1 : 0), target ? target.sets : 0));
+    const cell = (s) => `${wt(ex, s.weightKg)} × ${s.reps}`;
+    let body = "";
+    for (let i = 0; i < rows; i++) {
+      const p = prev[i], n = now[i];
+      const today = n ? `${cell(n)}${p && heavier(n, p) ? `<span class="up" aria-hidden="true">▲</span><span class="sr">, beat last time</span>` : ""}`
+        : i === next && w >= 0 && r >= 1 ? `<span class="muted">${wt(ex, w)} × ${r}</span><span class="sr">, next set</span>` : "";
+      body += `<tr${i === next ? ' class="next"' : ""}><td class="sn">${i + 1}</td>${last ? `<td class="prev">${p ? cell(p) : ""}</td>` : ""}<td>${today}</td></tr>`;
+    }
+    const day = d === todayKey() ? "Today" : dayLabel(d);
+    return `<table class="sets-tbl"><thead><tr><th>Set</th>${last ? "<th>Last time</th>" : ""}<th>${day}</th></tr></thead><tbody>${body}</tbody></table>`;
   }
   // Runs on every keystroke and stepper tick; both parts skip the DOM write when nothing changed.
   function updatePreview() {
@@ -1577,16 +1632,46 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const e = pts.at(-1);
     return `<svg viewBox="0 0 64 24" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--color-ink)" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${e[0].toFixed(1)}" cy="${e[1].toFixed(1)}" r="2.5" fill="var(--color-ink)"/></svg>`;
   }
-  // The last 8 Monday-to-Sunday weeks, oldest first: filled = trained that week.
-  function weekStrip(st) {
-    const cur = weekStart(todayKey());
-    let cells = "";
-    for (let i = 7; i >= 0; i--) {
-      const d = new Date(cur); d.setDate(d.getDate() - 7 * i);
-      cells += `<span class="w${st.trainedWeeks.has(toKey(d)) ? " on" : ""}${i === 0 ? " now" : ""}" title="${weekLabel(d)}"></span>`;
+  // Days with any set logged, from `from` for `n` days: [{ key, on, today, later }]. Warm-ups count, as on the calendar.
+  function trainedDays(from, n) {
+    const t = todayKey(), byDate = setIndex().byDate, out = [];
+    for (let i = 0; i < n; i++) {
+      const d = new Date(from); d.setDate(d.getDate() + i);
+      const key = toKey(d);
+      out.push({ key, on: byDate.has(key), today: key === t, later: key > t });
     }
-    return `<div class="strip" aria-hidden="true">${cells}</div>
-      <span class="strip-l"><b class="num">${st.streak}</b> ${st.streak === 1 ? "week" : "weeks"} in a row${st.longest > st.streak ? `, best ${st.longest}` : ""}</span>`;
+    return out;
+  }
+  const dayCls = (x) => `${x.on ? " on" : ""}${x.today ? " today" : x.later ? " later" : ""}`;
+  // The Log screen's week: Monday to Sunday, one cell a day.
+  function renderWeekStrip() {
+    const days = trainedDays(weekStart(todayKey()), 7), n = days.filter((x) => x.on).length;
+    $("#week-days-text").textContent = n ? `${n} ${n === 1 ? "day" : "days"} trained` : "No sets yet";
+    setHTML($("#week-days"), days.map((x, i) => `<span class="wd${dayCls(x)}">${"MTWTFSS"[i]}</span>`).join(""));
+  }
+  // The last 12 Monday-to-Sunday weeks, one column a week, then the streak in words.
+  function renderHeat(st) {
+    const start = weekStart(todayKey()); start.setDate(start.getDate() - 7 * 11);
+    const days = trainedDays(start, 84), n = days.filter((x) => x.on).length;
+    setHTML($("#heat"), days.map((x) => `<i class="${dayCls(x).trim()}" title="${dayLabel(x.key)}"></i>`).join(""));
+    $("#streak").innerHTML = `<b class="num">${st.streak}</b> ${st.streak === 1 ? "week" : "weeks"} in a row${st.longest > st.streak ? `, best ${st.longest}` : ""}. ${n} ${n === 1 ? "day" : "days"} trained in 12 weeks.`;
+  }
+  // A lift has stalled when none of its last 3 sessions beat the best set from before them. Only lifts still in
+  // use count: at least 4 sessions, the latest in the last 4 weeks.
+  function stalledLifts() {
+    const t = parse(todayKey()), out = [];
+    for (const ex of exerciseList()) {
+      const tops = [];
+      for (const s of workingSets(setIndex().byEx.get(ex) || [])) {
+        const last = tops.at(-1);
+        if (last && last.date === s.date) { if (heavier(s, last.top)) last.top = s; } else tops.push({ date: s.date, top: s });
+      }
+      if (tops.length < 4 || (t - parse(tops.at(-1).date)) / DAY > 28) continue;
+      const best = bestSet(tops.slice(0, -3).map((x) => x.top));
+      if (tops.slice(-3).some((x) => heavier(x.top, best))) continue;
+      out.push({ ex, best, since: tops.filter((x) => x.date > best.date).length });
+    }
+    return out;
   }
   const chartEx = () => (state.chartEx && exerciseList().includes(state.chartEx) ? state.chartEx : state.selected);
 
@@ -1605,7 +1690,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       const first = tracked.reduce((d, x) => (x.weeks[0].start < d ? x.weeks[0].start : d), tracked[0].weeks[0].start);
       $("#gain-sub").textContent = `${total > 0.05 ? "Stronger" : "Change"} since the week of ${short(first)}, adding up the kg added to your best set on ${tracked.length} ${tracked.length === 1 ? "lift" : "lifts"}.`;
     }
-    $("#streak").innerHTML = weekStrip(st);
+    renderHeat(st);
 
     const ce = chartEx();
     const withData = all.filter((x) => x.weeks.length);
@@ -1617,6 +1702,13 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         <span class="lr-val"><span>${wt(x.ex, pr.weightKg)} <small>${pr.weightKg > 0 ? "kg " : ""}× ${pr.reps}</small></span>${x.weeks.length >= 2 ? `<span class="dl">${change(pr, x.weeks[0].top)}</span>` : ""}</span>
       </button>`;
     }).join("") : `<p class="empty">Your heaviest lift for each exercise shows up here.</p>`;
+
+    const stalled = stalledLifts();
+    $("#stall-sec").hidden = !stalled.length;
+    $("#stalled").innerHTML = stalled.map((x) => `<button type="button" class="lift-row stall" data-ex="${esc(x.ex)}" aria-pressed="${x.ex === ce}">
+        <span class="lr-name">${esc(x.ex)}<small>Best ${wtKg(x.ex, x.best.weightKg)} × ${x.best.reps}, set ${x.best.date === todayKey() ? "today" : dayLabel(x.best.date)}</small></span>
+        <span class="dl">${x.since} sessions since</span>
+      </button>`).join("");
 
     const sel = all.find((x) => x.ex === ce);
     renderChart(sel ? sel.weeks : []);
@@ -1827,7 +1919,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     if (!list.length) { $("#history").innerHTML = `<p class="empty"><strong>No sets yet.</strong>Everything you log shows up here, newest day first, with Edit and Delete.</p>`; return; }
     const days = new Map();
     for (const s of list) { if (!days.has(s.date)) days.set(s.date, []); days.get(s.date).push(s); }
-    $("#history").innerHTML = [...days].map(([d, items]) => `<div id="day-${d}" style="scroll-margin-top: 12px">
+    $("#history").innerHTML = [...days].map(([d, items]) => `<div class="card" id="day-${d}" style="scroll-margin-top: 12px">
       <div class="day-head"><h3>${dayLabel(d)}</h3><span>${setCount(items)} ${setCount(items) === 1 ? "set" : "sets"}</span></div>
       ${liftGroups(items, prs)}</div>`).join("");
   }
@@ -1861,15 +1953,15 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   let pendingGain = null;     // a PR raised Strength gained: count up from this the next time Progress is shown
   function renderTab(name) {
     // Log and History only need the PR marks; the full stats are for Progress.
-    if (name === "log") { renderRoutines(); renderChips(); renderLog(); updatePreview(); renderToday(prIds()); }
+    if (name === "log") { renderWeekStrip(); renderRoutines(); renderChips(); renderLog(); updatePreview(); renderToday(prIds()); }
     else if (name === "progress") renderProgress(allWeeks(), stats());
     else renderHistory(prIds());
     dirty.delete(name);
   }
   // Logging a set saves at once (so a failed save can roll back) and redraws in the next frame, before it is
   // painted: two shorter tasks instead of one long one. A render() in between makes the queued one unnecessary.
-  // The Log button also stays under the thumb: if a line appears above it (the first set of a lift today adds
-  // the session line), the page scrolls by the same amount instead of the button sliding down.
+  // The Log button also stays under the thumb: if something above it grows (a set past last time's count adds a
+  // row to the set table), the page scrolls by the same amount instead of the button sliding down.
   // y0 is where the button was before anything changed (read while the layout is still clean, so it's free).
   let queued = 0;
   const renderNextFrame = (y0) => {
@@ -2543,10 +2635,12 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
   $("#history").addEventListener("click", onRowClick);
   $("#show-more").addEventListener("click", () => { state.histLimit += 60; renderHistory(prIds()); });
 
-  $("#lift-rows").addEventListener("click", (e) => {
+  // A lift row (records or stalled) puts that lift on the chart; from the stalled list, the chart is brought into view.
+  for (const id of ["#lift-rows", "#stalled"]) $(id).addEventListener("click", (e) => {
     const t = e.target.closest(".lift-row"); if (!t) return;
     state.chartEx = t.dataset.ex;
     renderProgress(exerciseList().map((ex) => ({ ex, weeks: weeksFor(ex) })), stats());
+    if (id === "#stalled") $("#chart").scrollIntoView({ block: "center", behavior: calm() ? "auto" : "smooth" });
   });
 
   // ---------- Info sheet ----------
