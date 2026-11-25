@@ -1,6 +1,7 @@
 // Offline cache for Lift Tracker. Bump VERSION when any app file changes.
-const VERSION = "lift-tracker-v15";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
+const VERSION = "lift-tracker-v16";
+const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "about.html",
+  "media/about-1-light.png", "media/about-1-dark.png", "media/about-2-light.png", "media/about-2-dark.png", "media/about-3-light.png", "media/about-3-dark.png"];
 const FONTS = "lift-tracker-fonts";
 
 // Install: every shell file comes from the network (cache: "reload"), never from the browser's HTTP cache, so a

@@ -1273,6 +1273,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     const bw = isBW(state.selected), unit = bw ? "added kg" : "kg";
     if ($("#plates").hidden !== bw) $("#plates").hidden = bw;
     if ($("#weight-l").textContent !== unit) $("#weight-l").textContent = unit;
+    if (bw) return;
     const w = parseFloat($("#weight").value), bar = prefs.barKg;
     const r = platesFor(w, bar);
     const toggle = `<button type="button" class="bar-toggle" id="bar-toggle" aria-label="Bar weight ${bar} kg, tap to change">Bar ${bar} kg</button>`;
@@ -1520,11 +1521,11 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       return;
     }
     const last = lastSession(state.selected, formDate());
-    const w = parseFloat($("#weight").value), r = parseInt($("#reps").value, 10);
-    const valid = w > 0 && r >= 1;
+    const { weightKg: w, reps: r } = readForm();
+    const valid = (isBW(state.selected) ? w >= 0 : w > 0) && r >= 1;
     if (!last) {
       const done = workingSets(setsOn(state.selected, formDate()));
-      setHTML(box, `<h2>Last time</h2><p class="muted">First time logging ${esc(state.selected)}. This set becomes your baseline, and next time you'll get a target to beat.</p>${done.length ? setTable(null, w, r) : ""}`);
+      setHTML(box, `<h2>Last time</h2><p class="muted">First time logging ${esc(state.selected)}. This set becomes your baseline, and next time you'll get a target to beat.</p>${done.length ? setTable(null, w, r, valid) : ""}`);
       return;
     }
     const t = last.top, st = stepOf(state.selected);
@@ -1539,14 +1540,14 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
       verdict = heavier(set, t) || heavier(t, set) ? `${change(set, t)}, ${word.toLowerCase()}` : `<span class="mk" aria-hidden="true">=</span>${word}`;
     }
     setHTML(box, `<div class="sec-head"><h2>Last time</h2><span>${dayLabel(last.date)}</span></div>
-      ${setTable(last, w, r)}
+      ${setTable(last, w, r, valid)}
       <span class="lbl">Beat it</span>
       <div class="targets">${targets.map((x) => `<button type="button" class="target" data-w="${x.w}" data-r="${x.r}" aria-pressed="${valid && x.w === w && x.r === r}"><b>${wt(state.selected, x.w)} × ${x.r}</b><small>${x.why}</small></button>`).join("")}</div>
       <p class="verdict">${verdict}</p>`);
   }
   // Set by set: last session's working sets beside this session's, with the set about to be logged as a marked
   // row showing what is in the entry now. A set that beats the same set last time gets a green mark.
-  function setTable(last, w, r) {
+  function setTable(last, w, r, valid) {
     const ex = state.selected, d = formDate();
     const flat = (list) => list.flatMap((s) => Array(Math.min(s.sets || 1, 20)).fill(s));
     const prev = last ? flat(last.sets) : [], now = flat(workingSets(setsOn(ex, d)));
@@ -1558,7 +1559,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     for (let i = 0; i < rows; i++) {
       const p = prev[i], n = now[i];
       const today = n ? `${cell(n)}${p && heavier(n, p) ? `<span class="up" aria-hidden="true">▲</span><span class="sr">, beat last time</span>` : ""}`
-        : i === next && w >= 0 && r >= 1 ? `<span class="muted">${wt(ex, w)} × ${r}</span><span class="sr">, next set</span>` : "";
+        : i === next && valid ? `<span class="muted">${wt(ex, w)} × ${r}</span><span class="sr">, next set</span>` : "";
       body += `<tr${i === next ? ' class="next"' : ""}><td class="sn">${i + 1}</td>${last ? `<td class="prev">${p ? cell(p) : ""}</td>` : ""}<td>${today}</td></tr>`;
     }
     const day = d === todayKey() ? "Today" : dayLabel(d);
@@ -1667,9 +1668,10 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
         if (last && last.date === s.date) { if (heavier(s, last.top)) last.top = s; } else tops.push({ date: s.date, top: s });
       }
       if (tops.length < 4 || (t - parse(tops.at(-1).date)) / DAY > 28) continue;
-      const best = bestSet(tops.slice(0, -3).map((x) => x.top));
-      if (tops.slice(-3).some((x) => heavier(x.top, best))) continue;
-      out.push({ ex, best, since: tops.filter((x) => x.date > best.date).length });
+      const best = bestSet(tops.map((x) => x.top));
+      const latestBest = tops.findLastIndex(({ top }) => !heavier(best, top));
+      const since = tops.length - latestBest - 1;
+      if (since >= 3) out.push({ ex, best: tops[latestBest].top, since });
     }
     return out;
   }
@@ -2270,7 +2272,7 @@ html.kb-open #pick-results { padding-bottom: calc(var(--kb, 0px) + var(--space-l
     state.selected = e.currentTarget.dataset.ex; state.chartEx = null;
     fillFromLast(state.selected);
     render();
-    $("#lift-name").scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    $("#lift-name").scrollIntoView({ block: "center", behavior: calm() ? "auto" : "smooth" });
   });
   $("#plates").addEventListener("click", (e) => {
     if (!e.target.closest("#bar-toggle")) return;
